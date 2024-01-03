@@ -37,6 +37,7 @@ def parse_args():
 	# parser.add_argument('--decay', default=0.96, type=float, help='weight decay rate')  
 	parser.add_argument('--shoot', default=10, type=int, help='K of top k')
 	parser.add_argument('--inner_product_mult', default=1, type=float, help='multiplier for the result')  
+	parser.add_argument('--meta_opt_weight_decay', default=0.001, type=float, help='weight decay regularizer')
 	parser.add_argument('--drop_rate', default=0.8, type=float, help='drop_rate')  
 	parser.add_argument('--drop_rate1', default=0.5, type=float, help='drop_rate')  
 	parser.add_argument('--seed', type=int, default=6)  
