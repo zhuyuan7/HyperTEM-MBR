@@ -35,14 +35,14 @@ import wandb
 import warnings
 warnings.filterwarnings("ignore")
 
-os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
-os.environ["CUDA_VISIBLE_DEVICES"]='0'
-
+os.environ['CUDA_LAUNCH_BLOCKING'] = '3'
+# os.environ["CUDA_VISIBLE_DEVICES"]='3'
+t.cuda.device_count() 
 t.backends.cudnn.benchmark=True
 
 if t.cuda.is_available():
     use_cuda = True
-    t.cuda.set_device(0)
+    t.cuda.set_device(3)
 else:
     use_cuda = False
 
@@ -86,7 +86,7 @@ class Model():
         self.behaviors = []
         self.behaviors_data = {}
         self.hyper_data = {}
-        self.beh_meta_path_data = {}
+        self.beh_meta_path_data = {}   
         self.beh_meta_path_mats = {}
         self.hyper_behavior_mats = {}
         self.hyper_behavior_Adj = {}
@@ -104,27 +104,44 @@ class Model():
 # TODO 아예 모델인풋을 BEH와 META를 합쳐서 들어가자. 오늘 테스트 
         if args.dataset == 'Tmall':
             self.predir = '/home/joo/JOOCML/data/Tmall/'
+            # self.behaviors_SSL = ['pv','fav', 'cart', 'pv_buy','pv_fav_buy','pv_fav_cart_buy','buy']
             self.behaviors_SSL = ['pv','fav', 'cart', 'buy']
-            self.behaviors = ['pv','fav', 'cart', 'buy']        
+            # self.behaviors= ['pv','fav', 'cart','pv_buy','pv_fav_buy','pv_fav_cart_buy', 'buy']
+            self.behaviors = ['pv','fav', 'cart', 'buy']
+            # self.behaviors = ['buy']
+            # self.beh_meta_path = ['pv_buy','pv_fav_buy','pv_fav_cart_buy','buy']
+            
 
         elif args.dataset == 'IJCAI_15':
             self.predir = '/home/joo/JOOCML/data/IJCAI_15/'
             self.behaviors = ['click','fav', 'cart', 'buy']
+            # self.behaviors = ['buy']
             self.behaviors_SSL = ['click','fav', 'cart', 'buy']
+            # self.beh_meta_path = ['click_buy','click_fav_buy','click_fav_cart_buy','buy']
+
+        # elif args.dataset == 'JD':
+        #     self.behaviors = ['review','browse', 'buy']
+        #     self.behaviors_SSL = ['review','browse', 'buy']
 
         elif args.dataset == 'retail_rocket':
             self.predir = '/home/joo/JOOCML/data/retail_rocket'
             self.behaviors = ['view','cart', 'buy']
+            # self.behaviors = ['buy']
             self.behaviors_SSL = ['view','cart', 'buy']
-
+            # self.beh_meta_path = ['view_buy','view_cart_buy','buy']
 
 
 
 ################ LOAD_ BEH_DATA ####################################################################################
         for i in range(0, len(self.behaviors)): #[5]
             with open(self.trn_file + self.behaviors[i], 'rb') as fs:
+            # with open(self.train_file + self.beh_meta_path[i] + '.pkl', 'rb') as fs:  #/home/joo/CML/data/retail_rocket/train_mat_view_cart_buy.pkl
                 data = pickle.load(fs)   # '/home/joo/CML/data/Tmall/trn_pv'  trn_fav' trn_fav' trn_buy'>
+                
                 self.behaviors_data[i] = data 
+                # row, col = data.nonzero
+                # print(row)
+                # print(col)
 
                 if data.get_shape()[0] > self.user_num:  #data.get_shape()[0] :31882
                     self.user_num = data.get_shape()[0]  
@@ -143,34 +160,110 @@ class Model():
                     self.trainLabel = 1*(self.trainMat != 0)   #shape:(31882, 31232)
                     self.labelP = np.squeeze(np.array(np.sum(self.trainLabel, axis=0)))   #shape:(31232,)
 ################ LOAD_ BEH_DATA ####################################################################################
+
+# ################ LOAD_ META_PATH_DATA ####################################################################################
+        # for i in range(0, len(self.behaviors)): #[5]
+        #     with open(self.trn_file + self.behaviors[i], 'rb') as fs:
+        # # for i in range(0, len(self.beh_meta_path)): #[5]
+        # #     with open(self.train_file + self.beh_meta_path[i] + '.pkl', 'rb') as fs:  #/home/joo/CML/data/Tmall/train_mat_fav_cart_buy.pkl
+        # #         # with open(self.train_file + self.beh_meta_path[i] + '.pkl', 'rb') as fs:
+        #         mp_data = pickle.load(fs)   # 'train_mat_pv_buy.pkl'  train_mat_pv_fav_buy.pkl'> train_mat_pv_fav_cart_buy.pkl'> train_mat_buy.pkl'>
+                
+        #         self.hyper_data[i] = coo_matrix(mp_data) 
+        #         self.beh_meta_path_data[i] = mp_data 
+
+        #         if mp_data.get_shape()[0] > self.user_num:  #data.get_shape()[0] :31882
+        #             self.user_num = mp_data.get_shape()[0]  
+        #         if mp_data.get_shape()[1] > self.item_num:  #data.get_shape()[1] :31232
+        #             self.item_num = mp_data.get_shape()[1]  
+
+             
+        #         if mp_data.data.max() > self.t_max:  # k-타임스텝 값 설정 유닉스타임
+        #             self.t_max = mp_data.data.max() # 1512316799  시간대의 날짜: 2017. 12. 4. 오전 12:59:59
+        #         if mp_data.data.min() < self.t_min:
+        #             self.t_min = mp_data.data.min() # 1511539200  시간대의 날짜: 2017. 11. 25. 오전 1:00:00
+
+        
+                # if self.beh_meta_path[i]==args.target:
+                #     self.mp_trainMat = mp_data
+                #     self.mp_trainLabel = 1*(self.mp_trainMat != 0)   #shape:(31882, 31232)
+                #     self.mp_labelP = np.squeeze(np.array(np.sum(self.mp_trainLabel, axis=0)))   #shape:(31232,)
+
+# ################ LOAD_ META_PATH_DATA ####################################################################################
         
         self.test_mat = pickle.load(open(self.test_file, 'rb')) #shape:(31882, 31232)
         self.userNum = self.behaviors_data[0].shape[0]  #self.behaviors_data[0] shape:(31882, 31232)  (2174,30113)
         self.itemNum = self.behaviors_data[0].shape[1]  #self.behaviors_data[0] shape:(31882, 31232)
 
+        # self.gru = nn.GRU(input_size = self.itemNum, hidden_size = args.hidden_dim, num_layers = 4)
         
     # ==>  BEHAVIOR_BUILDING
+        # graph_utils.data2mat()  
         time = datetime.datetime.now()
         
         print("Start BEHAVIOR_building:  ", time)
         for i in range(0, len(self.behaviors_data)):
+
+            # gru_behaviors_data =self.gru(self.behaviors_data[i][1])
+            # self.behaviors_data[i] = 1*(gru_behaviors_data[i]!=0)
+            
             self.behaviors_data[i] = 1*(self.behaviors_data[i]!=0)  #<2174x30113 sparse matrix of type '<class 'numpy.int32'>'
             self.behavior_mats[i] = graph_utils.get_use(self.behaviors_data[i]) #  
-            self.hyper_behavior_Adj[i] = hyper_graph_utils.get_hyper_use(self.behaviors_data[i])            
+
+
+            # self.hyper_behavior_mats[i] = hyper_graph_utils.loadOneFile(self.behaviors_data[i]) # 
+            self.hyper_behavior_Adj[i] = hyper_graph_utils.get_hyper_use(self.behaviors_data[i])
+            # self.userNum, self.itemNum = self.hyper_behavior_mats[i].shape
+            # self.hyper_behavior_Adj[i] =  hyper_graph_utils.makeTorchAdj(self.hyper_behavior_mats[i])
+            # self.user[i],self.item[i] = graph_utils.get_user(self.behavior_mats[i])
+
+            # self.behavior_gru_mats[i] = Gru.GRUModel(self.behavior_mats[i],16, 4)               
         time = datetime.datetime.now()
         print("End BEHAVIOR_building:", time)
+
+
+    # # ==> meta_path_BEHAVIOR_BUILDING
+    #     time = datetime.datetime.now()
+    #     print("Start META_building:  ", time)  # METAPATH 전처리후 매트릭스--> tensor
+    #     # self.beh_meta_path_data = {}
+    #     # self.beh_meta_path_mats = {}
+    #     for i in range(0, len(self.beh_meta_path)):
+    #         self.beh_meta_path_data[i] = 1*(pickle.load(open(self.train_file + self.beh_meta_path[i] + '.pkl','rb')) != 0) 
+    #         # self.beh_meta_path_data[i] = 1*(self.beh_meta_path_data[i] != 0) 
+        
+    #     for i in range(0, len(self.behaviors_data)):
+    #         self.beh_meta_path_mats[i] =  graph_utils.get_use(self.beh_meta_path_data[i]) 
+    #     time = datetime.datetime.now()
+    #     print("End META_building:", time)
+        
+    #     # time = datetime.datetime.now()
+    #     # print("Start building:  ", time)
+    #     # for i in range(0, len(self.behaviors)): # i =0,1,2,3
+    #     #     self.behavior_mats[i] = graph_utils.get_use(self.behaviors_data[i])                  
+    #     # time = datetime.datetime.now()
+    #     # print("End building:", time)
 
         print("user_num: ", self.user_num) # 31881
         print("item_num: ", self.item_num) # 31232 
         print("\n")
-
+        
+        #---------------------------------------------------------------------------------------------->>>>>
+        #train_data   # indices =nnz:199654
+        #  trainMat라는 희소 행렬(Sparse Matrix)에서 0이 아닌 원소의 인덱스를 반환하는 메서드입니다.
+        #  nonzero() 메서드는 희소 행렬에서 0이 아닌 원소의 인덱스를 반환하며, 반환된 인덱스는 행과 열의 쌍으로 구성된 배열입니다. 
+        # 이렇게 반환된 인덱스를 사용하여 희소 행렬에서 0이 아닌 원소의 위치를 찾을 수 있습니다.
         train_u, train_v = self.trainMat.nonzero()  #--> 실질적으로 trn_buy 파일 [6] train_u: shape:(167862,), train_v: shape:(167862,) 
         train_data = np.hstack((train_u.reshape(-1,1), train_v.reshape(-1,1))).tolist() # [train_u shape:(167862,1), train_v shape:(167862,1)] # [[0, 0], [0, 1], [0, 3], [0, 8], [0, 27], [1, 47], [1, 48], [1, 54], [1, 78], [1, 79], [
         
 
 
         train_dataset = DataHandler.RecDataset_beh(self.behaviors, train_data, self.item_num, self.behaviors_data, True)
+        # train_path_dataset = DataHandler.RecDataset_beh(self.beh_meta_path, train_data, self.item_num,  self.beh_meta_path_data, True)
+        # train_path_dataset = DataHandler.RecDataset_beh_path(self.beh_meta_path, train_data, self.item_num,  self.beh_meta_path_data, True)
         self.train_loader = dataloader.DataLoader(train_dataset, batch_size=args.batch, shuffle=True, num_workers=4, pin_memory=True)
+        # self.train_meta_loader = dataloader.DataLoader(train_path_dataset, batch_size=args.batch, shuffle=True, num_workers=4, pin_memory=True)
+        #valid_data
+
 
         # test_data  
         with open(self.tst_file, 'rb') as fs:   
@@ -178,13 +271,17 @@ class Model():
                                     # len():22438         #len():2174
         test_user = np.array([idx for idx, i in enumerate(data) if i is not None])  #array([    6,     9,    11, ..., 31872, 31874, 31876])
         test_item = np.array([i for idx, i in enumerate(data) if i is not None])    #array([  253,   392,   462, ..., 21210, 17045,  2486])
+        # tstUsrs = np.reshape(np.argwhere(data!=None), [-1])
         test_data = np.hstack((test_user.reshape(-1,1), test_item.reshape(-1,1))).tolist() #[[6, 253], [9, 392], [11, 462], [17, 726], [18, 738], [24, 1008], [28, 1142], [30, 1210],..., ]
+        # testbatch = np.maximum(1, args.batch * args.sampNum 
         test_dataset = DataHandler.RecDataset(test_data, self.item_num, self.trainMat, 0, False)  
         self.test_loader = dataloader.DataLoader(test_dataset, batch_size=args.batch, shuffle=False, num_workers=4, pin_memory=True)  
         # -------------------------------------------------------------------------------------------------->>>>>
 
     def prepareModel(self):
         self.modelName = self.getModelName()  
+        # self.setRandomSeed()
+        # self.gnn_layer = eval(args.gnn_layer)   # [16, 16, 16]
         self.hidden_dim = args.hidden_dim  #16
         
 
@@ -193,6 +290,7 @@ class Model():
         else:
             self.model = AGNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).cuda()
             self.meta_weight_net = MV_Net.MetaWeightNet(len(self.behaviors)).cuda()
+            # self.meta_weight_net = SE_NET.MetaWeightNet(len(self.behaviors)).cuda()
             
 
 
@@ -205,21 +303,21 @@ class Model():
         #       
 
 
-        # #Tmall
-        # self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
-        # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
-        # # self.meta_opt =  t.optim.RMSprop(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, centered=True)
-        # self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=5, step_size_down=10, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
-        # self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=3, step_size_down=7, mode='triangular', gamma=0.98, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
-        # # #                                                                                                                                                                           0.993                                             
-
-        # # retailrocket
+        #Tmall
         self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
-        # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
-        self.meta_opt =  t.optim.SGD(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, nesterov=True)
-        self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
-        self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
-                                                                                                                                            #  exp_range  step_size_up=1, step_size_down=2,
+        self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
+        # self.meta_opt =  t.optim.RMSprop(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, centered=True)
+        self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=5, step_size_down=10, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
+        self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=3, step_size_down=7, mode='triangular', gamma=0.98, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
+        # #                                                                                                                                                                           0.993                                             
+
+        # # # retailrocket
+        # self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
+        # # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
+        # self.meta_opt =  t.optim.SGD(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, nesterov=True)
+        # self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
+        # self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
+        #                                                                                                                                     #  exp_range  step_size_up=1, step_size_down=2,
 
 
         if use_cuda:
@@ -542,6 +640,11 @@ class Model():
         print("start_beh_ng_samp:  ", time)
         train_loader.dataset.ng_sample()
         print("end__beh_ng_samp:  ", time)
+
+        # print("start_mp_ng_samp:  ", time)
+        # train_meta_loader.dataset.ng_sample()
+        # print("end_mp_ng_samp:  ", time)
+        
         
         epoch_loss = 0
         
@@ -554,6 +657,15 @@ class Model():
         self.meta_start_index = 0   # args.meta_batch =32
         self.meta_end_index = self.meta_start_index + args.meta_batch  # 32 
 
+
+        # #TODO  HYPERGRAPH 부분 추가
+        self.mp_behavior_loss_list = [None]*len(self.behaviors)   # [None, None, None, None]      
+        self.mp_user_id_list = [None]*len(self.behaviors)         # [None, None, None, None] 
+        self.mp_item_id_pos_list = [None]*len(self.behaviors)     # [None, None, None, None] 
+        self.mp_item_id_neg_list = [None]*len(self.behaviors)     # [None, None, None, None] 
+
+        self.mp_meta_start_index = 0   # args.meta_batch =32
+        self.mp_meta_end_index = self.mp_meta_start_index + args.meta_batch  # 32 
 #----------------------------------------------------------------------------------
         
         cnt = 0
@@ -563,6 +675,7 @@ class Model():
         
             user = user.long().cuda()
             self.user_step_index = user
+            #print(len(user)) #8192
 
             self.meta_user = t.as_tensor(self.meta_multi_single[self.meta_start_index:self.meta_end_index]).cuda()  
             
@@ -574,6 +687,7 @@ class Model():
 
 
 #---round one---------------------------------------------------------------------------------------------
+            # print("round_1")
             meta_behavior_loss_list = [None]*len(self.behaviors)   # [None, None, None, None]
             meta_user_index_list = [None]*len(self.behaviors)      # [None, None, None, None]
 
@@ -582,18 +696,18 @@ class Model():
             meta_opt = t.optim.AdamW(meta_model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
             meta_model.load_state_dict(self.model.state_dict())
 
-            hyper_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors,self.hyper_behavior_Adj).cuda()
-            meta_opt = t.optim.AdamW(hyper_model.parameters(), lr=args.hyper_lr, weight_decay=0)
+            # hyper_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors,self.hyper_behavior_Adj).cuda()
+            # hyper_meta_opt = t.optim.AdamW(hyper_model.parameters(), lr=args.hyper_lr, weight_decay=0)
             
             
             meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds = meta_model()
         
             # TODO ! meta_model이랑 hyper graph 모델의 임베딩을 mix해서 학습시키자.
-            hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
+            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
  
 
-            meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds = hyper_graph_utils.mixer(meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds,
-                                                      hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
+            # meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds = hyper_graph_utils.mixer(meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds,
+            #                                           hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
 
 
             for index in range(len(self.behaviors)):
@@ -638,7 +752,8 @@ class Model():
 
             meta_model_loss = (meta_bprloss + args.reg * meta_regLoss + args.beta*meta_infoNCELoss) / args.batch    # tensor(0.6568
                                             # 0.001                       0.005
-
+            # for m_loss in meta_model_loss:
+            # meta_model_loss_list.append(meta_model_loss)
             meta_opt.zero_grad(set_to_none=True)
             self.meta_opt.zero_grad(set_to_none=True)
             meta_model_loss.backward()
@@ -657,10 +772,10 @@ class Model():
             user_index_list = [None]*len(self.behaviors)  #---
 
             user_embed, item_embed, user_embeds, item_embeds = meta_model()
-            hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
+            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
 
-            user_embed, item_embed, user_embeds, item_embeds = hyper_graph_utils.mixer(user_embed, item_embed, user_embeds, item_embeds,
-                                                      hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
+            # user_embed, item_embed, user_embeds, item_embeds = hyper_graph_utils.mixer(user_embed, item_embed, user_embeds, item_embeds,
+            #                                           hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
 
 
             for index in range(len(self.behaviors)):
@@ -699,24 +814,36 @@ class Model():
             infoNCELoss = sum(self.infoNCELoss_list) / len(self.infoNCELoss_list)
             round_two_regLoss = (t.norm(userEmbed) ** 2 + t.norm(posEmbed) ** 2 + t.norm(negEmbed) ** 2)
 
-            meta_loss = 0.5 * (bprloss + args.reg * round_two_regLoss  + args.beta*infoNCELoss) / args.batch
 
+            meta_loss = 0.5 * (bprloss + args.reg * round_two_regLoss  + args.beta*infoNCELoss) / args.batch
+                        #0.5
+            # for meta_losses in meta_loss:
+            # meta_model_loss_list.append(meta_loss)
+            
             self.meta_opt.zero_grad()
             meta_loss.backward()
             nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
+            # nn.utils.clip_grad_norm_(meta_model.parameters(), max_norm=20, norm_type=2)
             self.meta_opt.step()
 
+
 #---round two-----------------------------------------------------------------------------------------------
+
 
 
 #---round three---------------------------------------------------------------------------------------------
 
             # print("round_3")
             user_embed, item_embed, user_embeds, item_embeds = self.model()
-            hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
+            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, del()
+            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
+            # # print(hyper_user_embed.shape)   #torch.Size([2174, 16])
+            # # print(hyper_item_embed.shape)   # torch.Size([30113, 16])
+            # # print(hyper_user_embeds.shape)  # torch.Size([3, 2174, 16])
+            # # print(hyper_item_embeds.shape)  # torch.Size([3, 30113, 16])  
 
-            user_embed, item_embed, user_embeds, item_embeds = hyper_graph_utils.mixer(user_embed, item_embed, user_embeds, item_embeds,
-                                                      hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
+            # user_embed, item_embed, user_embeds, item_embeds = hyper_graph_utils.mixer(user_embed, item_embed, user_embeds, item_embeds,
+            #                                           hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
 
 
             for index in range(len(self.behaviors)):
@@ -766,6 +893,212 @@ class Model():
 
 
 #---round three---------------------------------------------------------------------------------------------
+            # cnt+=1
+
+        # return epoch_loss, user_embed, item_embed, user_embeds, item_embeds
+
+#---round three---------------------------------------------------------------------------------------------
+
+#=========== HYPER-GRAPH LEARNING  ===========================================================================
+        args.is_Meta_Path == True
+        # print("START_META-PATH LEARNING ")
+        for mp_user, mp_item_i, mp_item_j in train_loader:   # batch_size:8192 
+        
+            mp_user = mp_user.long().cuda()
+            self.mp_user_step_index = mp_user
+            #print(len(user)) #8192
+
+            self.mp_meta_user = t.as_tensor(self.meta_multi_single[self.mp_meta_start_index:self.mp_meta_end_index]).cuda()  
+            
+            if self.mp_meta_end_index == self.meta_multi_single.shape[0]:
+                self.mp_meta_start_index = 0  
+            else:
+                self.mp_meta_start_index = (self.mp_meta_start_index + args.meta_batch) % (self.meta_multi_single.shape[0] - 1) # 32 % 11689 =32  64 %11689= 64
+            self.mp_meta_end_index = min(self.mp_meta_start_index + args.meta_batch, self.meta_multi_single.shape[0])
+
+
+#--- HYPER-GRAPH round one---------------------------------------------------------------------------------------------
+            # print("round_1")
+            mp_meta_behavior_loss_list = [None]*len(self.behaviors)   # [None, None, None, None]
+            mp_meta_user_index_list = [None]*len(self.behaviors)      # [None, None, None, None]
+
+            mp_meta_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors,self.hyper_behavior_Adj).cuda()
+            hyper_meta_opt = t.optim.AdamW(mp_meta_model.parameters(), lr=args.hyper_lr, weight_decay=0)
+
+            # mp_meta_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).cuda() # newrec
+            # # mp_meta_model = METAGNN.myModel(self.user_num, self.item_num, self.beh_meta_path, self.beh_meta_path_mats).cuda() # newrec
+            # mp_meta_opt = t.optim.AdamW(mp_meta_model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
+            mp_meta_model.load_state_dict(self.model.state_dict(), strict=False)
+
+            mp_meta_user_embed, mp_meta_item_embed, mp_meta_user_embeds, mp_meta_item_embeds = mp_meta_model()
+
+
+            for index in range(len(self.behaviors)):
+
+                mp_not_zero_index = np.where(mp_item_i[index].cpu().numpy()!=-1)[0]  #  [tensor([20632, 29259...6, 14611]), tensor([  -1,   -1, ...-1, 9490]), tensor([ 1248, ..., 
+                                                                            # -1아닌 것 : torch.Size([8156]) ,(3046,),(6724,) ,(8192,)   -1인 것: torch.Size([32]),(5146,), (1468,)
+                self.mp_user_id_list[index] = mp_user[mp_not_zero_index].long().cuda()
+                mp_meta_user_index_list[index] = self.mp_user_id_list[index]
+                self.mp_item_id_pos_list[index] = mp_item_i[index][mp_not_zero_index].long().cuda()
+                self.mp_item_id_neg_list[index] = mp_item_j[index][mp_not_zero_index].long().cuda()
+
+                mp_meta_userEmbed = mp_meta_user_embed[self.mp_user_id_list[index]]    # torch.Size([8156, 16])
+                mp_meta_posEmbed = mp_meta_item_embed[self.mp_item_id_pos_list[index]] # torch.Size([8156, 16])
+                mp_meta_negEmbed = mp_meta_item_embed[self.mp_item_id_neg_list[index]] # torch.Size([8156, 16])
+
+                mp_meta_pred_i, mp_meta_pred_j = 0, 0
+                mp_meta_pred_i, mp_meta_pred_j = self.innerProduct(mp_meta_userEmbed, mp_meta_posEmbed, mp_meta_negEmbed)
+                
+                mp_meta_behavior_loss_list[index] = - (mp_meta_pred_i.view(-1) - mp_meta_pred_j.view(-1)).sigmoid().log()
+
+            # line 643 --> 405
+            mp_meta_infoNCELoss_list, mp_SSL_user_step_index = self.SSL(mp_meta_user_embeds, mp_meta_item_embeds, mp_meta_user_embed, mp_meta_item_embed, self.mp_user_step_index)
+
+            mp_meta_infoNCELoss_list_weights, mp_meta_behavior_loss_list_weights = self.meta_weight_net(\
+                                                                        mp_meta_infoNCELoss_list, \
+                                                                        mp_meta_behavior_loss_list, \
+                                                                        mp_SSL_user_step_index, \
+                                                                        mp_meta_user_index_list, \
+                                                                        mp_meta_user_embeds, \
+                                                                        mp_meta_user_embed)
+
+
+
+            for i in range(len(self.behaviors)):   # 각 4 behaviors에 대해  loss(torch.Size([819]))들을 합한 값들을 생성
+                mp_meta_infoNCELoss_list[i] = (mp_meta_infoNCELoss_list[i]*mp_meta_infoNCELoss_list_weights[i]).sum()  # 4 * torch.Size([])  tensor(2595.2078, tensor(2601.2222 tensor(2600.2822, tensor(2565.3550,  
+                mp_meta_behavior_loss_list[i] = (mp_meta_behavior_loss_list[i]*mp_meta_behavior_loss_list_weights[i]).sum()    # 0 ;tensor(6574.2588),  1 :tensor(2384.8611), 2: tensor(5448.2744,),3:tensor(6529.0820)
+
+
+            mp_meta_bprloss = sum(mp_meta_behavior_loss_list) / len(mp_meta_behavior_loss_list)   # tensor(5234.1191) = tensor(20936.4766)/4
+            mp_meta_infoNCELoss = sum(mp_meta_infoNCELoss_list) / len(mp_meta_infoNCELoss_list)  # tensor(13.5014= 0:tensor(2702.4526), 1:tensor(2705.1792), 2:tensor(2713.5522,3:tensor(2679.9612
+            mp_meta_regLoss = (t.norm(mp_meta_userEmbed) ** 2 + t.norm(mp_meta_posEmbed) ** 2 + t.norm(mp_meta_negEmbed) ** 2)  # tensor(132528.5938,=  tensor(53051.6562,)  tensor(38932.2891,)  tensor(40544.6523, )
+
+            mp_meta_model_loss = (mp_meta_bprloss + args.reg * mp_meta_regLoss + args.beta*mp_meta_infoNCELoss) / args.batch    # tensor(0.6568
+                                            # 0.001                       0.005
+            # mp_meta_model_loss_list.append(mp_meta_model_loss)
+            # all_mp_meta_model_loss = sum(mp_meta_model_loss_list) / len(mp_meta_model_loss_list)
+
+            
+            
+            hyper_meta_opt.zero_grad(set_to_none=True)
+            self.meta_opt.zero_grad(set_to_none=True)
+            mp_meta_model_loss.backward()
+            nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
+            nn.utils.clip_grad_norm_(mp_meta_model.parameters(), max_norm=20, norm_type=2)
+            hyper_meta_opt.step()
+            self.meta_opt.step()
+#---HYPER-GRAPH round one---------------------------------------------------------------------------------------------
+
+
+
+#---HYPER-GRAPH round two---------------------------------------------------------------------------------------------
+            # print("round_2")
+            mp_behavior_loss_list = [None]*len(self.behaviors)
+            mp_user_index_list = [None]*len(self.behaviors)  #---
+
+            mp_user_embed, mp_item_embed, mp_user_embeds, mp_item_embeds = mp_meta_model()
+            
+            for index in range(len(self.behaviors)):
+
+                mp_user_id, mp_item_id_pos, mp_item_id_neg = self.sampleTrainBatch(t.as_tensor(self.mp_meta_user), self.behaviors_data[i])
+
+                mp_user_index_list[index] = mp_user_id  # shape:torch.Size([176])
+
+
+                mp_userEmbed = mp_user_embed[mp_user_id]   # shape:torch.Size([176, 16])
+
+                mp_posEmbed = mp_item_embed[mp_item_id_pos]  # shape:torch.Size([225, 16])
+                mp_negEmbed = mp_item_embed[mp_item_id_neg]  # shape:torch.Size([225, 16])
+
+                mp_pred_i, mp_pred_j = self.innerProduct(mp_userEmbed, mp_posEmbed, mp_negEmbed)
+                mp_behavior_loss_list[index] = - (mp_pred_i.view(-1) - mp_pred_j.view(-1)).sigmoid().log()  
+            
+
+
+            self.mp_infoNCELoss_list, mp_SSL_user_step_index = self.SSL(mp_user_embeds, mp_item_embeds, mp_user_embed, mp_item_embed, self.mp_meta_user)
+
+            mp_infoNCELoss_list_weights, mp_behavior_loss_list_weights = self.meta_weight_net(\
+                                                                        self.mp_infoNCELoss_list, \
+                                                                        mp_behavior_loss_list, \
+                                                                        mp_SSL_user_step_index, \
+                                                                        mp_user_index_list, \
+                                                                        mp_user_embeds, \
+                                                                        mp_user_embed)
+
+
+            for i in range(len(self.behaviors)): 
+                self.mp_infoNCELoss_list[i] = (self.mp_infoNCELoss_list[i]*mp_infoNCELoss_list_weights[i]).sum()
+                mp_behavior_loss_list[i] = (mp_behavior_loss_list[i]*mp_behavior_loss_list_weights[i]).sum()   
+
+            mp_bprloss = sum(mp_behavior_loss_list) / len(self.mp_behavior_loss_list)
+            mp_infoNCELoss = sum(self.mp_infoNCELoss_list) / len(self.mp_infoNCELoss_list)
+            mp_round_two_regLoss = (t.norm(mp_userEmbed) ** 2 + t.norm(mp_posEmbed) ** 2 + t.norm(mp_negEmbed) ** 2)
+
+
+            mp_meta_loss = 0.5 * (mp_bprloss + args.reg * mp_round_two_regLoss  + args.beta*mp_infoNCELoss) / args.batch
+                            # 0.5 
+ 
+
+            self.meta_opt.zero_grad()
+            mp_meta_loss.backward()
+            nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
+            self.meta_opt.step()
+#---HYPER-GRAPH round two-----------------------------------------------------------------------------------------------
+
+
+
+#---HYPER-GRAPH round three---------------------------------------------------------------------------------------------
+
+            # print("round_3")
+            mp_user_embed, mp_item_embed, mp_user_embeds, mp_item_embeds = mp_meta_model()
+
+
+            for index in range(len(self.behaviors)):
+
+
+                mp_userEmbed = mp_user_embed[self.mp_user_id_list[index]]  # torch.Size([8192, 16])
+                mp_posEmbed = mp_item_embed[self.mp_item_id_pos_list[index]]  # torch.Size([8192, 16])
+                mp_negEmbed = mp_item_embed[self.mp_item_id_neg_list[index]]  # torch.Size([8192, 16])
+
+                mp_pred_i, mp_pred_j = 0, 0
+                mp_pred_i, mp_pred_j = self.innerProduct(mp_userEmbed, mp_posEmbed, mp_negEmbed)  # torch.Size([8192])
+
+                self.mp_behavior_loss_list[index] = - (mp_pred_i.view(-1) - mp_pred_j.view(-1)).sigmoid().log()   # torch.Size([8145])
+
+            mp_infoNCELoss_list, mp_SSL_user_step_index = self.SSL(mp_user_embeds, mp_item_embeds, mp_user_embed, mp_item_embed, self.mp_user_step_index)
+
+            with t.no_grad():
+                mp_infoNCELoss_list_weights, mp_behavior_loss_list_weights = self.meta_weight_net(\
+                                                                            mp_infoNCELoss_list, \
+                                                                            self.mp_behavior_loss_list, \
+                                                                            mp_SSL_user_step_index, \
+                                                                            self.mp_user_id_list, \
+                                                                            mp_user_embeds, \
+                                                                            mp_user_embed)
+
+
+            for i in range(len(self.behaviors)):
+                mp_infoNCELoss_list[i] = (mp_infoNCELoss_list[i]*mp_infoNCELoss_list_weights[i]).sum()
+                self.mp_behavior_loss_list[i] = (self.mp_behavior_loss_list[i]*mp_behavior_loss_list_weights[i]).sum()  
+                
+
+            mp_bprloss = sum(self.mp_behavior_loss_list) / len(self.mp_behavior_loss_list)
+            mp_infoNCELoss = sum(mp_infoNCELoss_list) / len(mp_infoNCELoss_list)
+            mp_regLoss = (t.norm(mp_userEmbed) ** 2 + t.norm(mp_posEmbed) ** 2 + t.norm(mp_negEmbed) ** 2)
+            
+            # TODO 이게 META-PATH-BEHAVIOR에 관한 전체 ROUND의 최종 loss 
+            mp_loss = (mp_bprloss + args.reg * mp_regLoss + args.beta*mp_infoNCELoss) / args.batch
+           
+            epoch_loss = epoch_loss + mp_loss.item()
+
+            self.opt.zero_grad(set_to_none=True)
+            mp_loss.backward()
+
+            nn.utils.clip_grad_norm_(mp_meta_model.parameters(), max_norm=20, norm_type=2)
+            self.opt.step()
+
+
+#---round three---------------------------------------------------------------------------------------------
             cnt+=1
 
         return epoch_loss, user_embed, item_embed, user_embeds, item_embeds
@@ -775,6 +1108,8 @@ class Model():
         #print("test!!!!")
         epochHR, epochNDCG = [0]*2
         with t.no_grad():
+            # print("user_embed:", user_embed)
+            # print("item_embed:", item_embed)
             user_embed, item_embed, user_embeds, item_embeds = self.model()
 
         cnt = 0
