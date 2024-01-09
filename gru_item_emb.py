@@ -51,7 +51,7 @@ def item_gru(self):
 
     item_patterns = []
     # Hyperparameters
-    for i in tqdm(range(item_id )):
+    for i in tqdm(range(item_id+1 )):
 
         input_size = {'user': max_user_index, 'behavior': max_beh_index}
         hidden_size = 16
