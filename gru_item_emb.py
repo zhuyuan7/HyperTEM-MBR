@@ -53,7 +53,7 @@ def item_gru(self):
     # Hyperparameters
     for i in tqdm(range(item_id )):
 
-        input_size = {'user': max_user_index+1, 'behavior': max_beh_index+1}
+        input_size = {'user': max_user_index, 'behavior': max_beh_index}
         hidden_size = 16
         num_layers = 1
 
