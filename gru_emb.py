@@ -3,29 +3,9 @@ import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
 from torch.utils.data import DataLoader, Dataset
-
-
-df = pd.read_csv("/home/joo/JOOCML/data/Tmall/real_gru_data.csv")  
-print(df)
-
-# df = pd.DataFrame(data)
-user_behavior_seqs = df.groupby('user')['behavior'].apply(list).reset_index()
-user_item_seqs = df.groupby('user')['item'].apply(list).reset_index()
-max_item_index = max(df['item'])
-max_beh_index = max(df['behavior'])
-
-
-
-user_data = {}
-
-# 데이터를 딕셔너리에 저장
-for user_id, group in df.groupby('user'):
-    item_tensor = torch.tensor(group['item'].tolist())
-    behavior_tensor = torch.tensor(group['behavior'].tolist())
-
-    # 딕셔너리에 사용자 아이디를 키로 하여 데이터 저장
-    user_data[user_id] = {'item': item_tensor, 'behavior': behavior_tensor}
-
+from tqdm import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # GRU 모델 정의
@@ -52,21 +32,49 @@ class GRUModel(nn.Module):
         return hidden#[-1, :, :]
 
 
-user_patterns = []
-# Hyperparameters
-for i in range(user_id ):
+def user_gru(self):
+    # df = pd.read_csv("/home/joo/JOOCML/data/Tmall/real_gru_data.csv")  
 
-    input_size = {'item': max_item_index+1, 'behavior': max_beh_index+1}
-    hidden_size = 16
-    num_layers = 4
+    max_item_index = max(df['item'])
+    max_beh_index = max(df['behavior'])
+
+    user_data = {}
+
+    # 데이터를 딕셔너리에 저장
+    for user_id, group in df.groupby('user'):
+        item_tensor = torch.tensor(group['item'].tolist())
+        behavior_tensor = torch.tensor(group['behavior'].tolist())
+
+        # 딕셔너리에 사용자 아이디를 키로 하여 데이터 저장
+        user_data[user_id] = {'item': item_tensor, 'behavior': behavior_tensor}
 
 
-# 모델 및 손실 함수, 최적화 함수 초기화
-    model = GRUModel(input_size, hidden_size, num_layers)
-    item_id = user_data[i]['item']
-    behavior = user_data[i]['behavior']
-    output = model(torch.tensor(item_id), torch.tensor(behavior))
-    user_patterns.append(output)
+    user_patterns = []
+    # Hyperparameters
+    for i in tqdm(range(user_id )):
 
+        input_size = {'item': max_item_index+1, 'behavior': max_beh_index+1}
+        hidden_size = 16
+        num_layers = 1
+
+
+    # 모델 및 손실 함수, 최적화 함수 초기화
+        model = GRUModel(input_size, hidden_size, num_layers)
+        item_id = user_data[i]['item']
+        behavior = user_data[i]['behavior']
+        hidden = model(torch.tensor(item_id), torch.tensor(behavior))
+        user_patterns.append(hidden)
+
+
+    output = torch.stack(user_patterns , 1)
+    print(output.shape) # torch.Size([1, 31881, 16])
+    return output
+
+
+if __name__ == "__main__":
+    df = pd.read_csv("/home/joo/JOOCML/data/Tmall/real_gru_data.csv")  
+    user_gru(df)
+
+    
 
     
