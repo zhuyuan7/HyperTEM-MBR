@@ -57,8 +57,6 @@ def user_gru(self):
         hidden_size = 16
         num_layers = 1
 
-
-    # 모델 및 손실 함수, 최적화 함수 초기화
         model = GRUModel(input_size, hidden_size, num_layers)
         item_id = user_data[i]['item']
         behavior = user_data[i]['behavior']
