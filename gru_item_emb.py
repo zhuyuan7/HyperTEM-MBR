@@ -64,9 +64,9 @@ def item_gru(self):
         item_patterns.append(hidden)
 
 
-    output = torch.stack(item_patterns , 1)
-    output.squeeze()
-    print(output.shape) # torch.Size([1, 31231, 16])
+    output = torch.stack(item_patterns , 1)  # # torch.Size([1, 31232, 16])
+    output = output.squeeze()
+    print(output.shape) # torch.Size([31231, 16])
     return output
 
 
