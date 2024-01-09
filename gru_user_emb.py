@@ -64,8 +64,9 @@ def user_gru(self):
         user_patterns.append(hidden)
 
 
-    output = torch.stack(user_patterns , 1)
-    print(output.shape) # torch.Size([1, 31881, 16])
+    output = torch.stack(user_patterns , 1)  # torch.Size([1, 31882, 16])
+    output = output.squeeze()  # torch.Size([31882, 16])
+    print(output.shape) 
     return output
 
 
