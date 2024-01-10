@@ -205,17 +205,22 @@ class MetaWeightNet(nn.Module):
             # print("1_info:",infoNCELoss_list_weights[i].shape ) #torch.Size([0])
             infoNCELoss_list_weights[i] = self.batch_norm(infoNCELoss_list_weights[i].unsqueeze(1)).squeeze()
             # print("2_info:",infoNCELoss_list_weights[i].shape ) #torch.Size([0])
-            infoNCELoss_list_weights[i] = args.inner_product_mult*self.sigmoid(infoNCELoss_list_weights[i])
+            # infoNCELoss_list_weights[i] = args.inner_product_mult*self.sigmoid(infoNCELoss_list_weights[i])
+            infoNCELoss_list_weights[i] = args.inner_product_mult_last*self.sigmoid(infoNCELoss_list_weights[i])
             # print("3_info:",infoNCELoss_list_weights[i].shape ) #torch.Size([0])
+            
             SSL_weight3 = self.dropout7(self.prelu(self.SSL_layer3(SSL_input3)))
             # print("1_SSL:",SSL_weight3.shape) #torch.Size([0, 1])
             SSL_weight3 = self.batch_norm(SSL_weight3).squeeze()   # tensor([], device='cuda:0', grad_fn=<SqueezeBackward0>)
             # print("2_SSL:",SSL_weight3.shape) #torch.Size([0])
-            SSL_weight3 = args.inner_product_mult*self.sigmoid(SSL_weight3)
+            # SSL_weight3 = args.inner_product_mult*self.sigmoid(SSL_weight3)
+            SSL_weight3 = args.inner_product_mult_last*self.sigmoid(SSL_weight3)
             # print("3_SSL:",SSL_weight3.shape) #torch.Size([0])
             infoNCELoss_list_weights[i] = (infoNCELoss_list_weights[i] + SSL_weight3)/2
             # print("info:",infoNCELoss_list_weights[i].shape ) #torch.Size([0])
             # print("I:",i)
+
+
             RS_input = args.inner_product_mult*torch.cat((behavior_loss_multi_list[i].unsqueeze(1).repeat(1, args.hidden_dim)*args.inner_product_mult, user_embed[user_index_list[i]]), 1).to(torch.float32)   # user_embed torch.Size([31882, 16])
             # print("1RS_input:", RS_input.shape) #torch.float32
             # data:tensor([], device='cuda:0', size=(0, 48))
@@ -224,6 +229,17 @@ class MetaWeightNet(nn.Module):
             # print("2RS_input:", RS_input.shape)  #torch.float32
             RS_input3 = args.inner_product_mult*((behavior_loss_multi_list[i].unsqueeze(1).repeat(1, args.hidden_dim))*user_embed[user_index_list[i]]).to(torch.float32)
             
+            # print("RS_input3:", RS_input3.shape)  #torch.float32
+            
+            # print("RS_INPUT:", RS_input.shape)
+            # print("RS_INPUT:", RS_input)
+            # if i == 2 and RS_input.shape[0] == 1:  # [1, 48]
+            #     RS_input = torch.empty([0] + list(RS_input.shape[1:])).cuda()
+            #     # RS_input = torch.Size([0] + list(RS_input[1:]))
+            #     # RS_input = torch.zeros(RS_input.shape[0]).cuda()
+            # else:
+            #     pass
+                # print("new_RS_INPUT:", RS_input.shape)
             behavior_loss_multi_list_weights[i] = self.dropout7(self.prelu(self.RS_layer1(RS_input))) 
             # print("dropout7_behavior_loss_multi_list_weights[i] :",behavior_loss_multi_list_weights[i].shape)  #torch.Size([2, 24]) ,  torch.Size([1, 24])
             
@@ -239,14 +255,22 @@ class MetaWeightNet(nn.Module):
             #  에러의 원인은 batch_size를 2로 변경해서 임. 다시 default=8192으로 원상복귀하니 잘 돌아감.
             behavior_loss_multi_list_weights[i] = self.batch_norm(behavior_loss_multi_list_weights[i].unsqueeze(dim=1))
             # print("bc_norm_behavior_loss_multi_list_weights[i]:", behavior_loss_multi_list_weights[i].shape)  # torch.Size([2, 1])
-            behavior_loss_multi_list_weights[i] = args.inner_product_mult*self.sigmoid(behavior_loss_multi_list_weights[i]).squeeze()
+            # behavior_loss_multi_list_weights[i] = args.inner_product_mult*self.sigmoid(behavior_loss_multi_list_weights[i]).squeeze()
+            behavior_loss_multi_list_weights[i] = args.inner_product_mult_last*self.sigmoid(behavior_loss_multi_list_weights[i]).squeeze()
             # print("inner_norm_behavior_loss_multi_list_weights[i]:", behavior_loss_multi_list_weights[i].shape)  # torch.Size([2])
+            
+            # if i == 2 and RS_input3.shape[0] == 1:  # [1, 48]
+            #     RS_input3 = torch.empty([0] + list(RS_input3.shape[1:])).cuda()
+            #     # print("1_RS_weight3:",RS_input3.shape)  #torch.Size([2, 1])
+            # else:
+            #     pass
             
             RS_weight3 = self.dropout7(self.prelu(self.RS_layer3(RS_input3)))
             # print("new_1_RS_weight3:",RS_weight3.shape)  #torch.Size([2, 1])
             RS_weight3 = self.batch_norm(RS_weight3).squeeze(dim = -1)
             # print("2_RS_weight3:",RS_weight3.shape)  #torch.Size([2])
-            RS_weight3 = args.inner_product_mult*self.sigmoid(RS_weight3).squeeze()
+            # RS_weight3 = args.inner_product_mult*self.sigmoid(RS_weight3).squeeze()
+            RS_weight3 = args.inner_product_mult_last*self.sigmoid(RS_weight3).squeeze()
             # print("3_RS_weight3:",RS_weight3.shape)  #torch.Size([2])
             behavior_loss_multi_list_weights[i] = behavior_loss_multi_list_weights[i] + RS_weight3
             # print("final_RS_weight3:",behavior_loss_multi_list_weights[i].shape)  # torch.Size([2])
