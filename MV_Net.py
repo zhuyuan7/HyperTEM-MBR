@@ -56,9 +56,9 @@ class MetaWeightNet(nn.Module):
         # print("self.beh_num:",self.beh_num)
         for i in range(self.beh_num):
             if i == self.beh_num-1:
-                args.inner_product_mult = args.inner_product_mult_final
+                args.inner_product_mult_last = args.inner_product_mult_last
             else:
-                pass
+                args.inner_product_mult_last = args.inner_product_mult
 
             
             
