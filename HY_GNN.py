@@ -190,7 +190,7 @@ class HGCNLayer(nn.Module):
         return torch.spmm(adj, embeds)   # adj torch.Size([32287, 32287]), embeds torch.Size([32287, 16])
     
     def hgnnLayer(self, embeds, hyper):  # hyper torch.Size([128, 16])
-        return embeds @ (hyper.T @ hyper)# @ (embeds.T @ embeds)
+        return embeds @ (hyper.T @ hyper) @ (embeds.T @ embeds)
     
  
 
