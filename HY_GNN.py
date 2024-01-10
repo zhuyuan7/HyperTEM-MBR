@@ -73,37 +73,7 @@ class myModel(nn.Module):
         user_embed, item_embed, user_embeds, item_embeds = self.hgnn()
         return user_embed, item_embed, user_embeds, item_embeds 
 
-
-    def para_dict_to_tenser(self, para_dict):     
-        tensors = []
-        for beh in para_dict.keys():
-            tensors.append(para_dict[beh])
-        tensors = torch.stack(tensors, dim=0)
-
-        return tensors.float()
-
-    def update_params(self, lr_inner, first_order=False, source_params=None, detach=False):
-        if source_params is not None:
-            for tgt, src in zip(self.named_parameters(), source_params):
-                name_t, param_t = tgt
-                grad = src
-                if first_order:
-                    grad = to_var(grad.detach().data)
-                tmp = param_t - lr_inner * grad
-                self.set_param(self, name_t, tmp)
-        else:
-
-            for name, param in self.named_parameters()(self):
-                if not detach:
-                    grad = param.grad
-                    if first_order:
-                        grad = to_var(grad.detach().data)
-                    tmp = param - lr_inner * grad
-                    self.set_param(self, name, tmp)
-                else:
-                    param = param.detach_()  
-                    self.set_param(self, name, param)
-                    
+                  
   
 
 class HGNN(nn.Module):
@@ -237,8 +207,12 @@ class HGCNLayer(nn.Module):
             hyper_behavior_mat = self.hyper_behavior_Adj[i]['A'] #.clone().detach()   #torch.Size([31882, 31232])
             embeds = torch.concat([self.uEmbeds, self.iEmbeds], dim=0)  #U: torch.Size([2174, 16]) I: torch.Size([2174, 16]) CONCAT: torch.Size([32287, 16])
             embeds_list = [embeds]
-
-            tem_embeds = self.gcnLayer(hyper_behavior_mat , embeds_list[-1])   # torch.Size([32287, 16])
+            for j in range(args.gcn_hops):
+                temlat = self.gcnLayer(hyper_behavior_mat, embeds_list[-1])
+                embeds_list.append(temlat)
+            tem_embeds = sum(embeds_list)
+            
+            # tem_embeds = self.gcnLayer(hyper_behavior_mat , embeds_list[-1])   # torch.Size([32287, 16])
             user_embedding_list[i]  = self.hgnnLayer(tem_embeds[:self.userNum].detach(), self.uHyper)  #embeds[j][:self.userNum] ([16])    torch.Size([2174, 16]) torch.Size([16])
             item_embedding_list[i]= self.hgnnLayer(tem_embeds[self.userNum:].detach(), self.iHyper) 
  
