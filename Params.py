@@ -4,47 +4,48 @@ import argparse
 def parse_args():
 	parser = argparse.ArgumentParser(description='Model Params')
 
-	parser.add_argument('--wandb', default="retail_rocket", type=str, help='wandb run name')  #"roket_recsys"
+	parser.add_argument('--wandb', default="Tmall", type=str, help='wandb run name')  #"roket_recsys"
 	# parser.add_argument('--wandb', default="IJCAI_15", type=str, help='wandb run name')  #"roket_recsys"
 # 	#for this model
 	parser.add_argument('--hidden_dim', default=16, type=int, help='embedding size')  
 	parser.add_argument('--gnn_layer', default="[16,16,16]", type=str, help='gnn layers: number + dim')  
-	parser.add_argument('--dataset', default='retail_rocket', type=str, help='name of dataset')   # Tmall  /home/joo/CML/data/retail_rocket
+	parser.add_argument('--dataset', default='Tmall', type=str, help='name of dataset')   # Tmall  /home/joo/CML/data/retail_rocket
 	# parser.add_argument('--dataset', default='IJCAI_15', type=str, help='name of dataset') 
 	parser.add_argument('--point', default='for_meta_hidden_dim', type=str, help='')
 	parser.add_argument('--title', default='dim__8', type=str, help='title of model')  
 	parser.add_argument('--sampNum', default=10, type=int, help='batch size for sampling') 
 	parser.add_argument('--hyperNum', default=128, type=int, help='number of hyperedges')
 	parser.add_argument('--gcn_hops', default=2, type=int, help='number of hops in gcn precessing')
-	parser.add_argument('--mult', default=0.1, type=int, help='')
+	parser.add_argument('--mult', default=1, type=int, help='')
+	parser.add_argument('--num_layers', default=3, type=int, help='')
 	
 # 	#for train
-	parser.add_argument('--lr', default=1e-4, type=float, help='learning rate')
-	parser.add_argument('--opt_base_lr', default=3e-3, type=float, help='learning rate')
-	parser.add_argument('--opt_max_lr', default=5e-3, type=float, help='learning rate')
-	parser.add_argument('--opt_weight_decay', default=2e-4, type=float, help='weight decay regularizer')
-	parser.add_argument('--meta_opt_base_lr', default=2e-4, type=float, help='learning rate')
-	parser.add_argument('--meta_opt_max_lr', default=5e-3, type=float, help='learning rate')
-	parser.add_argument('--meta_opt_weight_decay', default=1e-4, type=float, help='weight decay regularizer')
-	parser.add_argument('--meta_lr', default=1e-3, type=float, help='_meta_learning rate')  
-	parser.add_argument('--hyper_lr', default=3e-3, type=float, help='hypergraph learning rate') #1e-3,
+	parser.add_argument('--lr', default=0.05, type=float, help='learning rate')
+	parser.add_argument('--opt_base_lr', default=0.01, type=float, help='learning rate')# 0.004
+	parser.add_argument('--opt_max_lr', default=0.05, type=float, help='learning rate')#0.005  =5e-3
+	parser.add_argument('--opt_weight_decay', default=0.001, type=float, help='weight decay regularizer')
+	parser.add_argument('--meta_opt_base_lr', default=0.001, type=float, help='learning rate') # 0.0004  1e-4
+	parser.add_argument('--meta_opt_max_lr', default=0.005, type=float, help='learning rate') # 0.005
+	parser.add_argument('--meta_opt_weight_decay', default=0.001, type=float, help='weight decay regularizer')
+	parser.add_argument('--meta_lr', default=0.08, type=float, help='_meta_learning rate')   # 1e-3
+	parser.add_argument('--hyper_lr', default=0.08, type=float, help='hypergraph learning rate') #1e-3
 	parser.add_argument('--batch', default=8192, type=int, help='batch size')   #8192        
 	parser.add_argument('--meta_batch', default=32, type=int, help='batch size') # 32  
 	parser.add_argument('--SSL_batch', default=30, type=int, help='batch size')
-	parser.add_argument('--reg', default=5e-3, type=float, help='weight decay regularizer') #1e-3
+	parser.add_argument('--reg', default=0.001, type=float, help='weight decay regularizer') #1e-3
 	parser.add_argument('--beta', default=0.005, type=float, help='scale of infoNCELoss')
 	parser.add_argument('--epoch', default=125, type=int, help='number of epochs')  #300
 	# parser.add_argument('--decay', default=0.96, type=float, help='weight decay rate')  
 	parser.add_argument('--shoot', default=10, type=int, help='K of top k')
 	parser.add_argument('--inner_product_mult', default=1, type=float, help='multiplier for the result')  
-	parser.add_argument('--meta_opt_weight_decay', default=0.001, type=float, help='weight decay regularizer')
+	parser.add_argument('--inner_product_mult_last', default=3, type=float, help='multiplier for the result')    
 	parser.add_argument('--drop_rate', default=0.8, type=float, help='drop_rate')  
-	parser.add_argument('--drop_rate1', default=0.5, type=float, help='drop_rate')  
+	parser.add_argument('--drop_rate1', default=0.8, type=float, help='drop_rate')  
 	parser.add_argument('--seed', type=int, default=6)  
 	parser.add_argument('--slope', type=float, default=0.1)  
-	parser.add_argument('--patience', type=int, default=10)
+	parser.add_argument('--patience', type=int, default=20)
 	#for save and read
-	parser.add_argument('--path', default='C:\\Users\\choi\\Desktop\\115\\JOOCML\\data\\', type=str, help='data path')
+	parser.add_argument('--path', default='/home/joo/JOOCML/data/', type=str, help='data path')
 	parser.add_argument('--save_path', default='tem', help='file name to save model and training record')
 	parser.add_argument('--load_model', default=None, help='model name to load')
 	parser.add_argument('--target', default='buy', type=str, help='target behavior to predict on')
@@ -53,8 +54,8 @@ def parse_args():
 	parser.add_argument('--loadModelPath', default='"/home/ww/Code/work3/BSTRec/Model/Tmall/for_meta_hidden_dim_dim__8_Tmall_2021_07_08__01_35_54_lr_0.0003_reg_0.001_batch_size_4096_gnn_layer_[16,16,16].pth', type=str, help='loadModelPath')
 	parser.add_argument('--isJustbeh', default=True , type=bool, help='GRU')
 	parser.add_argument('--is_Meta_Path', default=True , type=bool, help='not GRU')
-	parser.add_argument('--History_path', default='C:\\Users\\choi\\Desktop\\HY-CML\\History\\', type=str, help='data path')
-	parser.add_argument('--Model_path', default='C:\\Users\\choi\\Desktop\\HY-CML\\Model\\', type=str, help='data path')
+	parser.add_argument('--History_path', default='/home/joo/new_HY_CML/History/', type=str, help='data path')
+	parser.add_argument('--Model_path', default='/home/joo/new_HY_CML/Model/', type=str, help='data path')
 	# #Tmall: # loadPath_SSL_meta = "/home/ww/Code/work3/BSTRec/Model/Tmall/for_meta_hidden_dim_dim__8_Tmall_2021_07_08__01_35_54_lr_0.0003_reg_0.001_batch_size_4096_gnn_layer_[16,16,16].pth"
 	# #IJCAI_15: # loadPath_SSL_meta = "/home/ww/Code/work3/BSTRec/Model/IJCAI_15/for_meta_hidden_dim_dim__8_IJCAI_15_2021_07_10__14_11_55_lr_0.0003_reg_0.001_batch_size_4096_gnn_layer_[16,16,16].pth"
 	# #retailrocket: # loadPath_SSL_meta = "/home/ww/Code/work3/BSTRec/Model/retailrocket/for_meta_hidden_dim_dim__8_retailrocket_2021_07_10__18_35_32_lr_0.0003_reg_0.01_batch_size_1024_gnn_layer_[16,16,16].pth"
@@ -72,7 +73,7 @@ def parse_args():
 	parser.add_argument('--meta_slot', default=2, type=int, help='epoch number for each SSL')
 	parser.add_argument('--time_slot', default=60*60*24*360, type=float, help='length of time slots')  
 	parser.add_argument('--hidden_dim_meta', default=16, type=int, help='embedding size')
-	parser.add_argument('--predir', default="C:\\Users\\choi\\Desktop\\115\\JOOCML\\data\\retail_rocket\\", type=str, help='dataset')
+	parser.add_argument('--predir', default="/home/joo/JOOCML/data/Tmall/", type=str, help='dataset')
 	# parser.add_argument('--predir', default="/home/joo/JOOCML/data/IJCAI_15/", type=str, help='dataset')
 
 
