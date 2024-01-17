@@ -35,16 +35,19 @@ import wandb
 import warnings
 warnings.filterwarnings("ignore")
 
-os.environ['CUDA_LAUNCH_BLOCKING'] = '3'
-# os.environ["CUDA_VISIBLE_DEVICES"]='3'
-t.cuda.device_count() 
-t.backends.cudnn.benchmark=True
+# os.environ['CUDA_LAUNCH_BLOCKING'] = '2'
+# os.environ["CUDA_VISIBLE_DEVICES"]='0'
 
-if t.cuda.is_available():
-    use_cuda = True
-    t.cuda.set_device(3)
-else:
-    use_cuda = False
+t.backends.cudnn.benchmark=True
+t.autograd.set_detect_anomaly(True)
+
+device = t.device(f"cuda:{args.cuda_num}" if t.cuda.is_available() else "cpu")
+
+# if t.cuda.is_available():
+#     use_cuda = True
+#     t.cuda.set_device(2)
+# else:
+#     use_cuda = False
 
 MAX_FLAG = 0x7FFFFFFF
 
@@ -76,6 +79,9 @@ class Model():
         # self.meta_single = pickle.load(open(self.meta_single_file, 'rb'))
         self.meta_multi_single = pickle.load(open(self.meta_multi_single_file, 'rb')) #[3]
 
+        self.gru_user_embeddings = pickle.load(open('/home/joo/JOOCML/data/Tmall/only_user_gru.pkl', 'rb'))  # torch.Size([31882, 16])
+        self.gru_item_embeddings = pickle.load(open('/home/joo/JOOCML/data/Tmall/all_item_gru.pkl', 'rb')) # torch.Size([31232, 16])
+
         self.t_max = -1 
         self.t_min = 0x7FFFFFFF
         self.time_number = -1
@@ -104,31 +110,22 @@ class Model():
 # TODO 아예 모델인풋을 BEH와 META를 합쳐서 들어가자. 오늘 테스트 
         if args.dataset == 'Tmall':
             self.predir = '/home/joo/JOOCML/data/Tmall/'
-            # self.behaviors_SSL = ['pv','fav', 'cart', 'pv_buy','pv_fav_buy','pv_fav_cart_buy','buy']
             self.behaviors_SSL = ['pv','fav', 'cart', 'buy']
-            # self.behaviors= ['pv','fav', 'cart','pv_buy','pv_fav_buy','pv_fav_cart_buy', 'buy']
             self.behaviors = ['pv','fav', 'cart', 'buy']
-            # self.behaviors = ['buy']
-            # self.beh_meta_path = ['pv_buy','pv_fav_buy','pv_fav_cart_buy','buy']
-            
+
 
         elif args.dataset == 'IJCAI_15':
             self.predir = '/home/joo/JOOCML/data/IJCAI_15/'
             self.behaviors = ['click','fav', 'cart', 'buy']
-            # self.behaviors = ['buy']
             self.behaviors_SSL = ['click','fav', 'cart', 'buy']
-            # self.beh_meta_path = ['click_buy','click_fav_buy','click_fav_cart_buy','buy']
 
-        # elif args.dataset == 'JD':
-        #     self.behaviors = ['review','browse', 'buy']
-        #     self.behaviors_SSL = ['review','browse', 'buy']
+
 
         elif args.dataset == 'retail_rocket':
             self.predir = '/home/joo/JOOCML/data/retail_rocket'
             self.behaviors = ['view','cart', 'buy']
-            # self.behaviors = ['buy']
             self.behaviors_SSL = ['view','cart', 'buy']
-            # self.beh_meta_path = ['view_buy','view_cart_buy','buy']
+
 
 
 
@@ -138,7 +135,7 @@ class Model():
             # with open(self.train_file + self.beh_meta_path[i] + '.pkl', 'rb') as fs:  #/home/joo/CML/data/retail_rocket/train_mat_view_cart_buy.pkl
                 data = pickle.load(fs)   # '/home/joo/CML/data/Tmall/trn_pv'  trn_fav' trn_fav' trn_buy'>
                 
-                self.behaviors_data[i] = data 
+                self.behaviors_data[i] = data
                 # row, col = data.nonzero
                 # print(row)
                 # print(col)
@@ -160,88 +157,22 @@ class Model():
                     self.trainLabel = 1*(self.trainMat != 0)   #shape:(31882, 31232)
                     self.labelP = np.squeeze(np.array(np.sum(self.trainLabel, axis=0)))   #shape:(31232,)
 ################ LOAD_ BEH_DATA ####################################################################################
-
-# ################ LOAD_ META_PATH_DATA ####################################################################################
-        # for i in range(0, len(self.behaviors)): #[5]
-        #     with open(self.trn_file + self.behaviors[i], 'rb') as fs:
-        # # for i in range(0, len(self.beh_meta_path)): #[5]
-        # #     with open(self.train_file + self.beh_meta_path[i] + '.pkl', 'rb') as fs:  #/home/joo/CML/data/Tmall/train_mat_fav_cart_buy.pkl
-        # #         # with open(self.train_file + self.beh_meta_path[i] + '.pkl', 'rb') as fs:
-        #         mp_data = pickle.load(fs)   # 'train_mat_pv_buy.pkl'  train_mat_pv_fav_buy.pkl'> train_mat_pv_fav_cart_buy.pkl'> train_mat_buy.pkl'>
-                
-        #         self.hyper_data[i] = coo_matrix(mp_data) 
-        #         self.beh_meta_path_data[i] = mp_data 
-
-        #         if mp_data.get_shape()[0] > self.user_num:  #data.get_shape()[0] :31882
-        #             self.user_num = mp_data.get_shape()[0]  
-        #         if mp_data.get_shape()[1] > self.item_num:  #data.get_shape()[1] :31232
-        #             self.item_num = mp_data.get_shape()[1]  
-
-             
-        #         if mp_data.data.max() > self.t_max:  # k-타임스텝 값 설정 유닉스타임
-        #             self.t_max = mp_data.data.max() # 1512316799  시간대의 날짜: 2017. 12. 4. 오전 12:59:59
-        #         if mp_data.data.min() < self.t_min:
-        #             self.t_min = mp_data.data.min() # 1511539200  시간대의 날짜: 2017. 11. 25. 오전 1:00:00
-
-        
-                # if self.beh_meta_path[i]==args.target:
-                #     self.mp_trainMat = mp_data
-                #     self.mp_trainLabel = 1*(self.mp_trainMat != 0)   #shape:(31882, 31232)
-                #     self.mp_labelP = np.squeeze(np.array(np.sum(self.mp_trainLabel, axis=0)))   #shape:(31232,)
-
-# ################ LOAD_ META_PATH_DATA ####################################################################################
         
         self.test_mat = pickle.load(open(self.test_file, 'rb')) #shape:(31882, 31232)
         self.userNum = self.behaviors_data[0].shape[0]  #self.behaviors_data[0] shape:(31882, 31232)  (2174,30113)
         self.itemNum = self.behaviors_data[0].shape[1]  #self.behaviors_data[0] shape:(31882, 31232)
 
-        # self.gru = nn.GRU(input_size = self.itemNum, hidden_size = args.hidden_dim, num_layers = 4)
-        
-    # ==>  BEHAVIOR_BUILDING
-        # graph_utils.data2mat()  
         time = datetime.datetime.now()
         
         print("Start BEHAVIOR_building:  ", time)
-        for i in range(0, len(self.behaviors_data)):
-
-            # gru_behaviors_data =self.gru(self.behaviors_data[i][1])
-            # self.behaviors_data[i] = 1*(gru_behaviors_data[i]!=0)
-            
+        for i in range(0, len(self.behaviors_data)):          
             self.behaviors_data[i] = 1*(self.behaviors_data[i]!=0)  #<2174x30113 sparse matrix of type '<class 'numpy.int32'>'
             self.behavior_mats[i] = graph_utils.get_use(self.behaviors_data[i]) #  
 
-
-            # self.hyper_behavior_mats[i] = hyper_graph_utils.loadOneFile(self.behaviors_data[i]) # 
             self.hyper_behavior_Adj[i] = hyper_graph_utils.get_hyper_use(self.behaviors_data[i])
-            # self.userNum, self.itemNum = self.hyper_behavior_mats[i].shape
-            # self.hyper_behavior_Adj[i] =  hyper_graph_utils.makeTorchAdj(self.hyper_behavior_mats[i])
-            # self.user[i],self.item[i] = graph_utils.get_user(self.behavior_mats[i])
-
-            # self.behavior_gru_mats[i] = Gru.GRUModel(self.behavior_mats[i],16, 4)               
+         
         time = datetime.datetime.now()
         print("End BEHAVIOR_building:", time)
-
-
-    # # ==> meta_path_BEHAVIOR_BUILDING
-    #     time = datetime.datetime.now()
-    #     print("Start META_building:  ", time)  # METAPATH 전처리후 매트릭스--> tensor
-    #     # self.beh_meta_path_data = {}
-    #     # self.beh_meta_path_mats = {}
-    #     for i in range(0, len(self.beh_meta_path)):
-    #         self.beh_meta_path_data[i] = 1*(pickle.load(open(self.train_file + self.beh_meta_path[i] + '.pkl','rb')) != 0) 
-    #         # self.beh_meta_path_data[i] = 1*(self.beh_meta_path_data[i] != 0) 
-        
-    #     for i in range(0, len(self.behaviors_data)):
-    #         self.beh_meta_path_mats[i] =  graph_utils.get_use(self.beh_meta_path_data[i]) 
-    #     time = datetime.datetime.now()
-    #     print("End META_building:", time)
-        
-    #     # time = datetime.datetime.now()
-    #     # print("Start building:  ", time)
-    #     # for i in range(0, len(self.behaviors)): # i =0,1,2,3
-    #     #     self.behavior_mats[i] = graph_utils.get_use(self.behaviors_data[i])                  
-    #     # time = datetime.datetime.now()
-    #     # print("End building:", time)
 
         print("user_num: ", self.user_num) # 31881
         print("item_num: ", self.item_num) # 31232 
@@ -258,11 +189,7 @@ class Model():
 
 
         train_dataset = DataHandler.RecDataset_beh(self.behaviors, train_data, self.item_num, self.behaviors_data, True)
-        # train_path_dataset = DataHandler.RecDataset_beh(self.beh_meta_path, train_data, self.item_num,  self.beh_meta_path_data, True)
-        # train_path_dataset = DataHandler.RecDataset_beh_path(self.beh_meta_path, train_data, self.item_num,  self.beh_meta_path_data, True)
         self.train_loader = dataloader.DataLoader(train_dataset, batch_size=args.batch, shuffle=True, num_workers=4, pin_memory=True)
-        # self.train_meta_loader = dataloader.DataLoader(train_path_dataset, batch_size=args.batch, shuffle=True, num_workers=4, pin_memory=True)
-        #valid_data
 
 
         # test_data  
@@ -288,9 +215,9 @@ class Model():
         if args.isload == True:
             self.loadModel(args.loadModelPath)
         else:
-            self.model = AGNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).cuda()
-            self.meta_weight_net = MV_Net.MetaWeightNet(len(self.behaviors)).cuda()
-            # self.meta_weight_net = SE_NET.MetaWeightNet(len(self.behaviors)).cuda()
+            self.model = AGNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).to(device)
+            self.meta_weight_net = MV_Net.MetaWeightNet(len(self.behaviors)).to(device)
+            # self.meta_weight_net = SE_NET.MetaWeightNet(len(self.behaviors)).to(device)
             
 
 
@@ -306,22 +233,22 @@ class Model():
         #Tmall
         self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
         self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
-        # self.meta_opt =  t.optim.RMSprop(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, centered=True)
+        # # self.meta_opt =  t.optim.RMSprop(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, centered=True)
         self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=5, step_size_down=10, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
         self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=3, step_size_down=7, mode='triangular', gamma=0.98, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
-        # #                                                                                                                                                                           0.993                                             
+        # # # #                                                                                                                                                                           0.993                                             
 
-        # # # retailrocket
+        # retailrocket
         # self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
-        # # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
+        # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
         # self.meta_opt =  t.optim.SGD(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, nesterov=True)
         # self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
         # self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
-        #                                                                                                                                     #  exp_range  step_size_up=1, step_size_down=2,
+                                                                                                                                            #  exp_range  step_size_up=1, step_size_down=2,
 
 
-        if use_cuda:
-            self.model = self.model.cuda()
+        # if use_cuda:
+        self.model = self.model.to(device)
 
     def innerProduct(self, u, i, j):  
         pred_i = t.sum(t.mul(u,i), dim=1)*args.inner_product_mult  
@@ -345,7 +272,7 @@ class Model():
             for i in range(x1.shape[0]):
                 index_set = set(np.arange(x1.shape[0]))
                 index_set.remove(i)
-                index_set_neg = t.as_tensor(np.array(list(index_set))).long().cuda()  
+                index_set_neg = t.as_tensor(np.array(list(index_set))).long().to(device)  
 
                 x_pos = x1[i].repeat(x1.shape[0]-1, 1)
                 x_neg = x2[index_set]  
@@ -365,7 +292,7 @@ class Model():
 
             index_set = set(np.array(step_index))
             index_set.remove(i.item())
-            neg2_index = t.as_tensor(np.array(list(index_set))).long().cuda()
+            neg2_index = t.as_tensor(np.array(list(index_set))).long().to(device)
 
             neg1_index = t.ones((2,), dtype=t.long)
             neg1_index = neg1_index.new_full((len(index_set),), i)
@@ -378,13 +305,13 @@ class Model():
             index_set = set(np.array(step_index.cpu()))   # len 804 {30729, 4106, 10255, 20504, 20505, 26, 22558, 20513, 14372, 4135, 20521, 16427, 22572,
             batch_index_set = set(np.array(batch_index.cpu()))  # len 30 {1415, 17288, 25612, 31251, 8340, 16918, 20505, 20378, 28444, 10908, 8874, 19636, 24886,
             neg2_index_set = index_set - batch_index_set                         #beh
-            neg2_index = t.as_tensor(np.array(list(neg2_index_set))).long().cuda()  #[774]
+            neg2_index = t.as_tensor(np.array(list(neg2_index_set))).long().to(device)  #[774]
             neg2_index = t.unsqueeze(neg2_index, 0)                              #torch.Size([1, 774])
             neg2_index = neg2_index.repeat(len(batch_index), 1)                  #torch.Size([30, 774])
             neg2_index = t.reshape(neg2_index, (1, -1))                          #torch.Size([1, 23220])
             neg2_index = t.squeeze(neg2_index)                                   #shape:torch.Size([23220])
                                                                                  #target
-            neg1_index = batch_index.long().cuda()                               #torch.Size([1, 23220])
+            neg1_index = batch_index.long().to(device)                               #torch.Size([1, 23220])
             neg1_index = t.unsqueeze(neg1_index, 1)                              #shape:torch.Size([30, 1])
             neg1_index = neg1_index.repeat(1, len(neg2_index_set))               #shape:torch.Size([30, 774])
             neg1_index = t.reshape(neg1_index, (1, -1))                          #shape:torch.Size([1, 23220])        
@@ -437,7 +364,7 @@ class Model():
             D = embedding1.shape[1]  # 16
 
             pos_score = compute(embedding1[step_index], embedding2[step_index]).squeeze()  #torch.Size([819])
-            neg_score = t.zeros((N,), dtype = t.float64).cuda()  #shape:torch.Size([819])
+            neg_score = t.zeros((N,), dtype = t.float64).to(device)  #shape:torch.Size([819])
 
             #-------------------------------------------------multi version-----------------------------------------------------
             steps = int(np.ceil(N / args.SSL_batch))  #separate the batch to smaller one  819/ 30 =28
@@ -465,7 +392,7 @@ class Model():
         item_con_loss_list = []
 
         SSL_len = int(user_step_index.shape[0]/10)  # 8192/10 =819
-        user_step_index = t.as_tensor(np.random.choice(user_step_index.cpu(), size=SSL_len, replace=False, p=None)).cuda() # torch.Size 819
+        user_step_index = t.as_tensor(np.random.choice(user_step_index.cpu(), size=SSL_len, replace=False, p=None)).to(device) # torch.Size 819
 
         for i in range(len(self.behaviors_SSL)):  # ['pv', 'fav', 'cart', 'buy']
 
@@ -629,7 +556,7 @@ class Model():
                 item_id_neg.append(neglocs[j])          # [12169, 12169, 12169, 12169, 12169, 26936, 26936, 26936, 26936, 26936, 9020, 9020, 9020
                 cur += 1
 
-        return t.as_tensor(np.array(user_id)).cuda(), t.as_tensor(np.array(item_id_pos)).cuda(), t.as_tensor(np.array(item_id_neg)).cuda() 
+        return t.as_tensor(np.array(user_id)).to(device), t.as_tensor(np.array(item_id_pos)).to(device), t.as_tensor(np.array(item_id_neg)).to(device) 
 
 
     def trainEpoch(self):   
@@ -641,11 +568,7 @@ class Model():
         train_loader.dataset.ng_sample()
         print("end__beh_ng_samp:  ", time)
 
-        # print("start_mp_ng_samp:  ", time)
-        # train_meta_loader.dataset.ng_sample()
-        # print("end_mp_ng_samp:  ", time)
-        
-        
+
         epoch_loss = 0
         
 #-----------------------------------------------------------------------------------
@@ -673,11 +596,11 @@ class Model():
 
         for user, item_i, item_j in train_loader:   # batch_size:8192 
         
-            user = user.long().cuda()
+            user = user.long().to(device)
             self.user_step_index = user
             #print(len(user)) #8192
 
-            self.meta_user = t.as_tensor(self.meta_multi_single[self.meta_start_index:self.meta_end_index]).cuda()  
+            self.meta_user = t.as_tensor(self.meta_multi_single[self.meta_start_index:self.meta_end_index]).to(device)  
             
             if self.meta_end_index == self.meta_multi_single.shape[0]:
                 self.meta_start_index = 0  
@@ -692,32 +615,22 @@ class Model():
             meta_user_index_list = [None]*len(self.behaviors)      # [None, None, None, None]
 
 
-            meta_model = AGNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).cuda() 
+            meta_model = AGNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).to(device) 
             meta_opt = t.optim.AdamW(meta_model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
             meta_model.load_state_dict(self.model.state_dict())
 
-            # hyper_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors,self.hyper_behavior_Adj).cuda()
-            # hyper_meta_opt = t.optim.AdamW(hyper_model.parameters(), lr=args.hyper_lr, weight_decay=0)
-            
             
             meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds = meta_model()
         
-            # TODO ! meta_model이랑 hyper graph 모델의 임베딩을 mix해서 학습시키자.
-            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
- 
-
-            # meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds = hyper_graph_utils.mixer(meta_user_embed, meta_item_embed, meta_user_embeds, meta_item_embeds,
-            #                                           hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
-
 
             for index in range(len(self.behaviors)):
 
                 not_zero_index = np.where(item_i[index].cpu().numpy()!=-1)[0]  #  [tensor([20632, 29259...6, 14611]), tensor([  -1,   -1, ...-1, 9490]), tensor([ 1248, ..., 
                                                                             # -1아닌 것 : torch.Size([8156]) ,(3046,),(6724,) ,(8192,)   -1인 것: torch.Size([32]),(5146,), (1468,)
-                self.user_id_list[index] = user[not_zero_index].long().cuda()
+                self.user_id_list[index] = user[not_zero_index].long().to(device)
                 meta_user_index_list[index] = self.user_id_list[index]
-                self.item_id_pos_list[index] = item_i[index][not_zero_index].long().cuda()
-                self.item_id_neg_list[index] = item_j[index][not_zero_index].long().cuda()
+                self.item_id_pos_list[index] = item_i[index][not_zero_index].long().to(device)
+                self.item_id_neg_list[index] = item_j[index][not_zero_index].long().to(device)
 
                 meta_userEmbed = meta_user_embed[self.user_id_list[index]]    # torch.Size([8156, 16])
                 meta_posEmbed = meta_item_embed[self.item_id_pos_list[index]] # torch.Size([8156, 16])
@@ -731,19 +644,10 @@ class Model():
             # line 643 --> 405
             meta_infoNCELoss_list, SSL_user_step_index = self.SSL(meta_user_embeds, meta_item_embeds, meta_user_embed, meta_item_embed, self.user_step_index)
 
-            meta_infoNCELoss_list_weights, meta_behavior_loss_list_weights = self.meta_weight_net(\
-                                                                        meta_infoNCELoss_list, \
-                                                                        meta_behavior_loss_list, \
-                                                                        SSL_user_step_index, \
-                                                                        meta_user_index_list, \
-                                                                        meta_user_embeds, \
-                                                                        meta_user_embed)
-
-
 
             for i in range(len(self.behaviors)):   # 각 4 behaviors에 대해  loss(torch.Size([819]))들을 합한 값들을 생성
-                meta_infoNCELoss_list[i] = (meta_infoNCELoss_list[i]*meta_infoNCELoss_list_weights[i]).sum()  # 4 * torch.Size([])  tensor(2595.2078, tensor(2601.2222 tensor(2600.2822, tensor(2565.3550,  
-                meta_behavior_loss_list[i] = (meta_behavior_loss_list[i]*meta_behavior_loss_list_weights[i]).sum()    # 0 ;tensor(6574.2588),  1 :tensor(2384.8611), 2: tensor(5448.2744,),3:tensor(6529.0820)
+                meta_infoNCELoss_list[i] = (meta_infoNCELoss_list[i]).sum()  # 4 * torch.Size([])  tensor(2595.2078, tensor(2601.2222 tensor(2600.2822, tensor(2565.3550,  
+                meta_behavior_loss_list[i] = (meta_behavior_loss_list[i]).sum()    # 0 ;tensor(6574.2588),  1 :tensor(2384.8611), 2: tensor(5448.2744,),3:tensor(6529.0820)
 
 
             meta_bprloss = sum(meta_behavior_loss_list) / len(meta_behavior_loss_list)   # tensor(5234.1191) = tensor(20936.4766)/4
@@ -772,10 +676,6 @@ class Model():
             user_index_list = [None]*len(self.behaviors)  #---
 
             user_embed, item_embed, user_embeds, item_embeds = meta_model()
-            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
-
-            # user_embed, item_embed, user_embeds, item_embeds = hyper_graph_utils.mixer(user_embed, item_embed, user_embeds, item_embeds,
-            #                                           hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
 
 
             for index in range(len(self.behaviors)):
@@ -797,25 +697,18 @@ class Model():
 
             self.infoNCELoss_list, SSL_user_step_index = self.SSL(user_embeds, item_embeds, user_embed, item_embed, self.meta_user)
 
-            infoNCELoss_list_weights, behavior_loss_list_weights = self.meta_weight_net(\
-                                                                        self.infoNCELoss_list, \
-                                                                        behavior_loss_list, \
-                                                                        SSL_user_step_index, \
-                                                                        user_index_list, \
-                                                                        user_embeds, \
-                                                                        user_embed)
-
-
+ 
             for i in range(len(self.behaviors)):
-                self.infoNCELoss_list[i] = (self.infoNCELoss_list[i]*infoNCELoss_list_weights[i]).sum()
-                behavior_loss_list[i] = (behavior_loss_list[i]*behavior_loss_list_weights[i]).sum()   
+                self.infoNCELoss_list[i] = (self.infoNCELoss_list[i]).sum()
+                behavior_loss_list[i] = (behavior_loss_list[i]).sum()   
+
 
             bprloss = sum(behavior_loss_list) / len(self.behavior_loss_list)
             infoNCELoss = sum(self.infoNCELoss_list) / len(self.infoNCELoss_list)
             round_two_regLoss = (t.norm(userEmbed) ** 2 + t.norm(posEmbed) ** 2 + t.norm(negEmbed) ** 2)
 
-
-            meta_loss = 0.5 * (bprloss + args.reg * round_two_regLoss  + args.beta*infoNCELoss) / args.batch
+            #meta_loss = 0.5 * (bprloss + args.reg * round_two_regLoss  + args.beta*infoNCELoss) / args.batch
+            meta_loss = (bprloss + args.reg * round_two_regLoss  + args.beta*infoNCELoss) / args.batch
                         #0.5
             # for meta_losses in meta_loss:
             # meta_model_loss_list.append(meta_loss)
@@ -835,16 +728,7 @@ class Model():
 
             # print("round_3")
             user_embed, item_embed, user_embeds, item_embeds = self.model()
-            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, del()
-            # hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds = hyper_model()
-            # # print(hyper_user_embed.shape)   #torch.Size([2174, 16])
-            # # print(hyper_item_embed.shape)   # torch.Size([30113, 16])
-            # # print(hyper_user_embeds.shape)  # torch.Size([3, 2174, 16])
-            # # print(hyper_item_embeds.shape)  # torch.Size([3, 30113, 16])  
-
-            # user_embed, item_embed, user_embeds, item_embeds = hyper_graph_utils.mixer(user_embed, item_embed, user_embeds, item_embeds,
-            #                                           hyper_user_embed, hyper_item_embed, hyper_user_embeds, hyper_item_embeds)
-
+ 
 
             for index in range(len(self.behaviors)):
 
@@ -860,19 +744,10 @@ class Model():
 
             infoNCELoss_list, SSL_user_step_index = self.SSL(user_embeds, item_embeds, user_embed, item_embed, self.user_step_index)
 
-            with t.no_grad():
-                infoNCELoss_list_weights, behavior_loss_list_weights = self.meta_weight_net(\
-                                                                            infoNCELoss_list, \
-                                                                            self.behavior_loss_list, \
-                                                                            SSL_user_step_index, \
-                                                                            self.user_id_list, \
-                                                                            user_embeds, \
-                                                                            user_embed)
-
 
             for i in range(len(self.behaviors)):
-                infoNCELoss_list[i] = (infoNCELoss_list[i]*infoNCELoss_list_weights[i]).sum()
-                self.behavior_loss_list[i] = (self.behavior_loss_list[i]*behavior_loss_list_weights[i]).sum()  
+                infoNCELoss_list[i] = (infoNCELoss_list[i]).sum()
+                self.behavior_loss_list[i] = (self.behavior_loss_list[i]).sum()  
                 
 
             bprloss = sum(self.behavior_loss_list) / len(self.behavior_loss_list)
@@ -904,11 +779,11 @@ class Model():
         # print("START_META-PATH LEARNING ")
         for mp_user, mp_item_i, mp_item_j in train_loader:   # batch_size:8192 
         
-            mp_user = mp_user.long().cuda()
+            mp_user = mp_user.long().to(device)
             self.mp_user_step_index = mp_user
             #print(len(user)) #8192
 
-            self.mp_meta_user = t.as_tensor(self.meta_multi_single[self.mp_meta_start_index:self.mp_meta_end_index]).cuda()  
+            self.mp_meta_user = t.as_tensor(self.meta_multi_single[self.mp_meta_start_index:self.mp_meta_end_index]).to(device)  
             
             if self.mp_meta_end_index == self.meta_multi_single.shape[0]:
                 self.mp_meta_start_index = 0  
@@ -922,12 +797,9 @@ class Model():
             mp_meta_behavior_loss_list = [None]*len(self.behaviors)   # [None, None, None, None]
             mp_meta_user_index_list = [None]*len(self.behaviors)      # [None, None, None, None]
 
-            mp_meta_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors,self.hyper_behavior_Adj).cuda()
+            mp_meta_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors,self.hyper_behavior_Adj).to(device)
             hyper_meta_opt = t.optim.AdamW(mp_meta_model.parameters(), lr=args.hyper_lr, weight_decay=0)
 
-            # mp_meta_model = HY_GNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).cuda() # newrec
-            # # mp_meta_model = METAGNN.myModel(self.user_num, self.item_num, self.beh_meta_path, self.beh_meta_path_mats).cuda() # newrec
-            # mp_meta_opt = t.optim.AdamW(mp_meta_model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
             mp_meta_model.load_state_dict(self.model.state_dict(), strict=False)
 
             mp_meta_user_embed, mp_meta_item_embed, mp_meta_user_embeds, mp_meta_item_embeds = mp_meta_model()
@@ -937,10 +809,10 @@ class Model():
 
                 mp_not_zero_index = np.where(mp_item_i[index].cpu().numpy()!=-1)[0]  #  [tensor([20632, 29259...6, 14611]), tensor([  -1,   -1, ...-1, 9490]), tensor([ 1248, ..., 
                                                                             # -1아닌 것 : torch.Size([8156]) ,(3046,),(6724,) ,(8192,)   -1인 것: torch.Size([32]),(5146,), (1468,)
-                self.mp_user_id_list[index] = mp_user[mp_not_zero_index].long().cuda()
+                self.mp_user_id_list[index] = mp_user[mp_not_zero_index].long().to(device)
                 mp_meta_user_index_list[index] = self.mp_user_id_list[index]
-                self.mp_item_id_pos_list[index] = mp_item_i[index][mp_not_zero_index].long().cuda()
-                self.mp_item_id_neg_list[index] = mp_item_j[index][mp_not_zero_index].long().cuda()
+                self.mp_item_id_pos_list[index] = mp_item_i[index][mp_not_zero_index].long().to(device)
+                self.mp_item_id_neg_list[index] = mp_item_j[index][mp_not_zero_index].long().to(device)
 
                 mp_meta_userEmbed = mp_meta_user_embed[self.mp_user_id_list[index]]    # torch.Size([8156, 16])
                 mp_meta_posEmbed = mp_meta_item_embed[self.mp_item_id_pos_list[index]] # torch.Size([8156, 16])
@@ -954,19 +826,10 @@ class Model():
             # line 643 --> 405
             mp_meta_infoNCELoss_list, mp_SSL_user_step_index = self.SSL(mp_meta_user_embeds, mp_meta_item_embeds, mp_meta_user_embed, mp_meta_item_embed, self.mp_user_step_index)
 
-            mp_meta_infoNCELoss_list_weights, mp_meta_behavior_loss_list_weights = self.meta_weight_net(\
-                                                                        mp_meta_infoNCELoss_list, \
-                                                                        mp_meta_behavior_loss_list, \
-                                                                        mp_SSL_user_step_index, \
-                                                                        mp_meta_user_index_list, \
-                                                                        mp_meta_user_embeds, \
-                                                                        mp_meta_user_embed)
-
-
 
             for i in range(len(self.behaviors)):   # 각 4 behaviors에 대해  loss(torch.Size([819]))들을 합한 값들을 생성
-                mp_meta_infoNCELoss_list[i] = (mp_meta_infoNCELoss_list[i]*mp_meta_infoNCELoss_list_weights[i]).sum()  # 4 * torch.Size([])  tensor(2595.2078, tensor(2601.2222 tensor(2600.2822, tensor(2565.3550,  
-                mp_meta_behavior_loss_list[i] = (mp_meta_behavior_loss_list[i]*mp_meta_behavior_loss_list_weights[i]).sum()    # 0 ;tensor(6574.2588),  1 :tensor(2384.8611), 2: tensor(5448.2744,),3:tensor(6529.0820)
+                mp_meta_infoNCELoss_list[i] = (mp_meta_infoNCELoss_list[i]).sum()  # 4 * torch.Size([])  tensor(2595.2078, tensor(2601.2222 tensor(2600.2822, tensor(2565.3550,  
+                mp_meta_behavior_loss_list[i] = (mp_meta_behavior_loss_list[i]).sum()    # 0 ;tensor(6574.2588),  1 :tensor(2384.8611), 2: tensor(5448.2744,),3:tensor(6529.0820)
 
 
             mp_meta_bprloss = sum(mp_meta_behavior_loss_list) / len(mp_meta_behavior_loss_list)   # tensor(5234.1191) = tensor(20936.4766)/4
@@ -975,10 +838,7 @@ class Model():
 
             mp_meta_model_loss = (mp_meta_bprloss + args.reg * mp_meta_regLoss + args.beta*mp_meta_infoNCELoss) / args.batch    # tensor(0.6568
                                             # 0.001                       0.005
-            # mp_meta_model_loss_list.append(mp_meta_model_loss)
-            # all_mp_meta_model_loss = sum(mp_meta_model_loss_list) / len(mp_meta_model_loss_list)
 
-            
             
             hyper_meta_opt.zero_grad(set_to_none=True)
             self.meta_opt.zero_grad(set_to_none=True)
@@ -1017,27 +877,18 @@ class Model():
 
             self.mp_infoNCELoss_list, mp_SSL_user_step_index = self.SSL(mp_user_embeds, mp_item_embeds, mp_user_embed, mp_item_embed, self.mp_meta_user)
 
-            mp_infoNCELoss_list_weights, mp_behavior_loss_list_weights = self.meta_weight_net(\
-                                                                        self.mp_infoNCELoss_list, \
-                                                                        mp_behavior_loss_list, \
-                                                                        mp_SSL_user_step_index, \
-                                                                        mp_user_index_list, \
-                                                                        mp_user_embeds, \
-                                                                        mp_user_embed)
-
-
             for i in range(len(self.behaviors)): 
-                self.mp_infoNCELoss_list[i] = (self.mp_infoNCELoss_list[i]*mp_infoNCELoss_list_weights[i]).sum()
-                mp_behavior_loss_list[i] = (mp_behavior_loss_list[i]*mp_behavior_loss_list_weights[i]).sum()   
+                self.mp_infoNCELoss_list[i] = (self.mp_infoNCELoss_list[i]).sum()
+                mp_behavior_loss_list[i] = (mp_behavior_loss_list[i]).sum()   
 
             mp_bprloss = sum(mp_behavior_loss_list) / len(self.mp_behavior_loss_list)
             mp_infoNCELoss = sum(self.mp_infoNCELoss_list) / len(self.mp_infoNCELoss_list)
             mp_round_two_regLoss = (t.norm(mp_userEmbed) ** 2 + t.norm(mp_posEmbed) ** 2 + t.norm(mp_negEmbed) ** 2)
 
 
-            mp_meta_loss = 0.5 * (mp_bprloss + args.reg * mp_round_two_regLoss  + args.beta*mp_infoNCELoss) / args.batch
+            #mp_meta_loss = 0.5 * (mp_bprloss + args.reg * mp_round_two_regLoss  + args.beta*mp_infoNCELoss) / args.batch
                             # 0.5 
- 
+            mp_meta_loss = (mp_bprloss + args.reg * mp_round_two_regLoss  + args.beta*mp_infoNCELoss) / args.batch
 
             self.meta_opt.zero_grad()
             mp_meta_loss.backward()
@@ -1064,22 +915,14 @@ class Model():
                 mp_pred_i, mp_pred_j = self.innerProduct(mp_userEmbed, mp_posEmbed, mp_negEmbed)  # torch.Size([8192])
 
                 self.mp_behavior_loss_list[index] = - (mp_pred_i.view(-1) - mp_pred_j.view(-1)).sigmoid().log()   # torch.Size([8145])
-
-            mp_infoNCELoss_list, mp_SSL_user_step_index = self.SSL(mp_user_embeds, mp_item_embeds, mp_user_embed, mp_item_embed, self.mp_user_step_index)
-
+            
             with t.no_grad():
-                mp_infoNCELoss_list_weights, mp_behavior_loss_list_weights = self.meta_weight_net(\
-                                                                            mp_infoNCELoss_list, \
-                                                                            self.mp_behavior_loss_list, \
-                                                                            mp_SSL_user_step_index, \
-                                                                            self.mp_user_id_list, \
-                                                                            mp_user_embeds, \
-                                                                            mp_user_embed)
+                mp_infoNCELoss_list, mp_SSL_user_step_index = self.SSL(mp_user_embeds, mp_item_embeds, mp_user_embed, mp_item_embed, self.mp_user_step_index)
 
 
             for i in range(len(self.behaviors)):
-                mp_infoNCELoss_list[i] = (mp_infoNCELoss_list[i]*mp_infoNCELoss_list_weights[i]).sum()
-                self.mp_behavior_loss_list[i] = (self.mp_behavior_loss_list[i]*mp_behavior_loss_list_weights[i]).sum()  
+                mp_infoNCELoss_list[i] = (mp_infoNCELoss_list[i]).sum()
+                self.mp_behavior_loss_list[i] = (self.mp_behavior_loss_list[i]).sum()  
                 
 
             mp_bprloss = sum(self.mp_behavior_loss_list) / len(self.mp_behavior_loss_list)
