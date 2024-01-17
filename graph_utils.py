@@ -6,14 +6,6 @@ import datetime
 from Params import args
 device = torch.device(f"cuda:{args.cuda_num}" if torch.cuda.is_available() else "cpu")
 
-# def data2mat(behaviors_data) : # ==>  BEHAVIOR_BUILDING
-#     time = datetime.datetime.now()
-#     print("Start BEHAVIOR_building:  ", time)
-#     for i in range(0, len(behaviors_data)):
-#         behaviors_data[i] = 1*(behaviors_data[i]!=0) 
-#         behavior_mats[i] = get_use(behaviors_data[i]) #                 
-#     time = datetime.datetime.now()
-#     print("End BEHAVIOR_building:", time)
 
 def get_user(behavior_mats):
     
