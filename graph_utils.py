@@ -4,8 +4,16 @@ from scipy.sparse import *
 import torch
 import datetime
 from Params import args
+device = torch.device(f"cuda:{args.cuda_num}" if torch.cuda.is_available() else "cpu")
 
-
+# def data2mat(behaviors_data) : # ==>  BEHAVIOR_BUILDING
+#     time = datetime.datetime.now()
+#     print("Start BEHAVIOR_building:  ", time)
+#     for i in range(0, len(behaviors_data)):
+#         behaviors_data[i] = 1*(behaviors_data[i]!=0) 
+#         behavior_mats[i] = get_use(behaviors_data[i]) #                 
+#     time = datetime.datetime.now()
+#     print("End BEHAVIOR_building:", time)
 
 def get_user(behavior_mats):
     
@@ -37,8 +45,8 @@ def normalize_adj(adj):
     colsum = np.array(adj.sum(0))
     colsum_diag = sp.diags(np.power(colsum+1e-8, -0.5).flatten())
 
-    
-    return adj
+    return rowsum_diag*adj*colsum_diag
+    # return adj
 
 
 def matrix_to_tensor(cur_matrix):
@@ -48,5 +56,5 @@ def matrix_to_tensor(cur_matrix):
     values = torch.from_numpy(cur_matrix.data)  
     shape = torch.Size(cur_matrix.shape) #torch.Size([31882, 31232])
 
-    return torch.sparse.FloatTensor(indices, values, shape).to(torch.float32).cuda()  
+    return torch.sparse.FloatTensor(indices, values, shape).to(torch.float32).to(device)  
 
