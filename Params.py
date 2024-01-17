@@ -81,17 +81,6 @@ def parse_args():
 	# parser.add_argument('--predir', default="/home/joo/JOOCML/data/IJCAI_15/", type=str, help='dataset')
 
 
-	# parser.add_argument('--att_head', default=2, type=int, help='number of attention heads')  
-	# parser.add_argument('--gnn_layer', default=2, type=int, help='number of gnn layers')
-	# parser.add_argument('--trnNum', default=10000, type=int, help='number of training instances per epoch')  
-	# parser.add_argument('--deep_layer', default=0, type=int, help='number of deep layers to make the final prediction')  
-	# parser.add_argument('--iiweight', default=0.3, type=float, help='weight for ii')  
-	# parser.add_argument('--graphSampleN', default=10000, type=int, help='use 25000 for training and 200000 for testing, empirically')  
-	# parser.add_argument('--divSize', default=1000, type=int, help='div size for smallTestEpoch')
-	# parser.add_argument('--tstEpoch', default=1, type=int, help='number of epoch to test while training')
-	# parser.add_argument('--subUsrSize', default=10, type=int, help='number of item for each sub-user')
-	# parser.add_argument('--subUsrDcy', default=0.9, type=float, help='decay factor for sub-users over time')  
-	# parser.add_argument('--slot', default=0.5, type=float, help='length of time slots')  
 
 	
 	return parser.parse_args()
