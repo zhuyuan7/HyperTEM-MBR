@@ -20,8 +20,6 @@ import DataHandler
 #import Gru
 
 import AGNN
-import METAGNN
-import MV_Net
 import HY_GNN
 import hyper_graph_utils
 # import SE_NET
@@ -216,34 +214,34 @@ class Model():
             self.loadModel(args.loadModelPath)
         else:
             self.model = AGNN.myModel(self.user_num, self.item_num, self.behaviors, self.behavior_mats).to(device)
-            self.meta_weight_net = MV_Net.MetaWeightNet(len(self.behaviors)).to(device)
+            # self.meta_weight_net = MV_Net.MetaWeightNet(len(self.behaviors)).to(device)
             # self.meta_weight_net = SE_NET.MetaWeightNet(len(self.behaviors)).to(device)
             
 
 
         # #IJCAI_15
         # self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
-        # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
+        ## self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
         # # self.meta_opt =  t.optim.RMSprop(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, centered=True)
         # self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=5, step_size_down=10, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
-        # self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=2, step_size_down=3, mode='triangular', gamma=0.98, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
+        ## self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=2, step_size_down=3, mode='triangular', gamma=0.98, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
         #       
 
 
         #Tmall
         self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
-        self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
+        # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
         # # self.meta_opt =  t.optim.RMSprop(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, centered=True)
         self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=5, step_size_down=10, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
-        self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=3, step_size_down=7, mode='triangular', gamma=0.98, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
+        # self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=3, step_size_down=7, mode='triangular', gamma=0.98, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
         # # # #                                                                                                                                                                           0.993                                             
 
         # retailrocket
         # self.opt = t.optim.AdamW(self.model.parameters(), lr = args.lr, weight_decay = args.opt_weight_decay)
-        # self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
-        # self.meta_opt =  t.optim.SGD(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, nesterov=True)
+        ## self.meta_opt =  t.optim.AdamW(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay)
+        ## self.meta_opt =  t.optim.SGD(self.meta_weight_net.parameters(), lr = args.meta_lr, weight_decay=args.meta_opt_weight_decay, momentum=0.95, nesterov=True)
         # self.scheduler = t.optim.lr_scheduler.CyclicLR(self.opt, args.opt_base_lr, args.opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.8, max_momentum=0.9, last_epoch=-1)
-        # self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
+        ## self.meta_scheduler = t.optim.lr_scheduler.CyclicLR(self.meta_opt, args.meta_opt_base_lr, args.meta_opt_max_lr, step_size_up=1, step_size_down=3, mode='triangular', gamma=0.99, scale_fn=None, scale_mode='cycle', cycle_momentum=False, base_momentum=0.9, max_momentum=0.99, last_epoch=-1)
                                                                                                                                             #  exp_range  step_size_up=1, step_size_down=2,
 
 
@@ -459,7 +457,7 @@ class Model():
             self.his_ndcg.append(NDCG)
 
             self.scheduler.step()
-            self.meta_scheduler.step()
+            # self.meta_scheduler.step()
 
             if HR > self.best_HR:
                 self.best_HR = HR
@@ -659,12 +657,12 @@ class Model():
             # for m_loss in meta_model_loss:
             # meta_model_loss_list.append(meta_model_loss)
             meta_opt.zero_grad(set_to_none=True)
-            self.meta_opt.zero_grad(set_to_none=True)
+            # self.meta_opt.zero_grad(set_to_none=True)
             meta_model_loss.backward()
-            nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
+            # nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
             nn.utils.clip_grad_norm_(meta_model.parameters(), max_norm=20, norm_type=2)
             meta_opt.step()
-            self.meta_opt.step()
+            # self.meta_opt.step()
             
 #---round one---------------------------------------------------------------------------------------------
 
@@ -713,11 +711,11 @@ class Model():
             # for meta_losses in meta_loss:
             # meta_model_loss_list.append(meta_loss)
             
-            self.meta_opt.zero_grad()
+            # self.meta_opt.zero_grad()
             meta_loss.backward()
-            nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
+            # nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
             # nn.utils.clip_grad_norm_(meta_model.parameters(), max_norm=20, norm_type=2)
-            self.meta_opt.step()
+            # self.meta_opt.step()
 
 
 #---round two-----------------------------------------------------------------------------------------------
@@ -841,12 +839,12 @@ class Model():
 
             
             hyper_meta_opt.zero_grad(set_to_none=True)
-            self.meta_opt.zero_grad(set_to_none=True)
+            # self.meta_opt.zero_grad(set_to_none=True)
             mp_meta_model_loss.backward()
-            nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
+            # nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
             nn.utils.clip_grad_norm_(mp_meta_model.parameters(), max_norm=20, norm_type=2)
             hyper_meta_opt.step()
-            self.meta_opt.step()
+            # self.meta_opt.step()
 #---HYPER-GRAPH round one---------------------------------------------------------------------------------------------
 
 
@@ -890,10 +888,10 @@ class Model():
                             # 0.5 
             mp_meta_loss = (mp_bprloss + args.reg * mp_round_two_regLoss  + args.beta*mp_infoNCELoss) / args.batch
 
-            self.meta_opt.zero_grad()
+            # self.meta_opt.zero_grad()
             mp_meta_loss.backward()
-            nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
-            self.meta_opt.step()
+            # nn.utils.clip_grad_norm_(self.meta_weight_net.parameters(), max_norm=20, norm_type=2)
+            # self.meta_opt.step()
 #---HYPER-GRAPH round two-----------------------------------------------------------------------------------------------
 
 
