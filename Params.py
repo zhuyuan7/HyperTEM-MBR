@@ -54,7 +54,7 @@ def parse_args():
 	parser.add_argument('--target', default='buy', type=str, help='target behavior to predict on')
 	parser.add_argument('--isload', default=False , type=bool, help='whether load model')  
 	parser.add_argument('--isJustTest', default=False , type=bool, help='whether load model')
-	parser.add_argument('--loadModelPath', default='"/home/ww/Code/work3/BSTRec/Model/Tmall/for_meta_hidden_dim_dim__8_Tmall_2021_07_08__01_35_54_lr_0.0003_reg_0.001_batch_size_4096_gnn_layer_[16,16,16].pth', type=str, help='loadModelPath')
+	parser.add_argument('--loadModelPath', type=str, help='loadModelPath')
 	parser.add_argument('--isJustbeh', default=True , type=bool, help='GRU')
 	parser.add_argument('--is_Meta_Path', default=True , type=bool, help='not GRU')
 	parser.add_argument('--History_path', default='/nas_homes/joo/Recommendation/Try_hy_cml/History/', type=str, help='data path')
